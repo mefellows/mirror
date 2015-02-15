@@ -23,7 +23,7 @@ func init() {
 	}
 
 	Commands = map[string]cli.CommandFactory{
-		"agent": func() (cli.Command, error) {
+		"sync": func() (cli.Command, error) {
 			return &command.SyncCommand{
 				Meta: meta,
 			}, nil

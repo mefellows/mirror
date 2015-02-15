@@ -3,6 +3,7 @@ package command
 import (
 	"flag"
 	"fmt"
+	"strings"
 )
 
 type excludes []string
@@ -31,7 +32,6 @@ func (c *SyncCommand) Run(args []string) int {
 
 	cmdFlags.StringVar(&c.Src, "src", "", "The src location to copy from")
 	cmdFlags.StringVar(&c.Dest, "dest", "", "The destination location to copy the contents of 'src' to.")
-	//cmdFlags.StringVar(&c.Filters, "filters", "", "The destination location to copy the contents of 'src' to.")
 	cmdFlags.Var(&c.Exclude, "exclude", "Set of exclusions as POSIX regular expressions to exclude from the transfer")
 
 	// Validate
@@ -50,9 +50,24 @@ func (c *SyncCommand) Run(args []string) int {
 }
 
 func (c *SyncCommand) Help() string {
-	return "Sync's a folder from A -> B"
+	helpText := `
+Usage: mirror sync [options] 
+
+  Copy the contents of the source directory (-src) to the destination directory (-dest) recursively.
+  
+Options:
+
+  -force                     Force a build to continue if artifacts exist, deletes existing artifacts
+  -src                       The source directory from which to copy from
+  -dest                      The destination directory from which to copy to
+  -whatif                    Runs the sync operation as a dry-run (similar to the -n rsync flag)
+  -exclude                   A regular expression used to exclude files and directories that match. 
+                             This is a special option that may be specified multiple times
+`
+
+	return strings.TrimSpace(helpText)
 }
 
 func (c *SyncCommand) Synopsis() string {
-	return "Run interactive"
+	return "Copy the contents of a source directory to a destination directory"
 }

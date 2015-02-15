@@ -1,4 +1,4 @@
-package mirror
+package filesystem
 
 import (
 	"time"
@@ -10,24 +10,6 @@ type FileSystem interface {
 	Read(File) ([]byte, error)  // Read a File
 	Write(File, []byte) error   // Write a File
 	FileTree() FileTree         // Returns a FileTree structure of Files representing the FileSystem hierarchy
-}
-
-// TODO: Attach these Tree functions to its own class/structure/package
-func FileTreeDiff(src FileTree, target FileTree) (update FileTree, delete FileTree, err error) {
-	// TODO: Implement a tree diff algorithm
-	return nil, nil, nil
-}
-
-// Walk a FileTree and perform some operation
-func FileTreeWalk(func(*FileTree) (*FileTree, error)) error {
-	return nil
-}
-
-// A FileTree of Files represented as a linked FileTree data-structure
-type FileTree interface {
-	ParentNode() FileTree
-	ChildNodes() []FileTree
-	File() File
 }
 
 // Simple File abstraction

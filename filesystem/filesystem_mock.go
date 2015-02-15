@@ -1,4 +1,4 @@
-package mirror
+package filesystem
 
 type MockFileSystem struct {
 	ReadBytes []byte
