@@ -9,18 +9,24 @@ type FileSystem interface {
 	Dir(string) ([]File, error) // Read the contents of a directory
 	Read(File) ([]byte, error)  // Read a File
 	Write(File, []byte) error   // Write a File
-	Tree() Tree                 // Returns a Tree structure of Files representing the FileSystem hierarchy
+	FileTree() FileTree         // Returns a FileTree structure of Files representing the FileSystem hierarchy
 }
 
-func TreeDiff(src Tree, target Tree) (update Tree, delete Tree, err error) {
+// TODO: Attach these Tree functions to its own class/structure/package
+func FileTreeDiff(src FileTree, target FileTree) (update FileTree, delete FileTree, err error) {
 	// TODO: Implement a tree diff algorithm
 	return nil, nil, nil
 }
 
-// A Tree of Files represented as a linked Tree data-structure
-type Tree interface {
-	ParentNode() Tree
-	ChildNodes() []Tree
+// Walk a FileTree and perform some operation
+func FileTreeWalk(func(*FileTree) (*FileTree, error)) error {
+	return nil
+}
+
+// A FileTree of Files represented as a linked FileTree data-structure
+type FileTree interface {
+	ParentNode() FileTree
+	ChildNodes() []FileTree
 	File() File
 }
 
