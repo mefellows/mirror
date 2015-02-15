@@ -6,7 +6,7 @@ go:
 - tip
 install:
 - make updatedeps
-- go build -o mirror
+- go build -o bin/mirror
 before_install:
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
