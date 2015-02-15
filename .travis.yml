@@ -23,4 +23,5 @@ matrix:
   - go: tip
 env:
   global:
-    secure: J74YaqEG7lbFxG+e2Hyo/+dQltCrEvTwh1WLVP9LizlcJpXgGhZSoRXDjgpIrKC3e2RFqY/brccEkC4WPQ/Am68mku1eFC0S1h1+xhiwAslp8NcwwalIy016l7FY3yX1UBoGSR+20HBMpMnaKLNV4pyAzQB0E3uuoOuSNgAJxZQ=
+  - secure: J74YaqEG7lbFxG+e2Hyo/+dQltCrEvTwh1WLVP9LizlcJpXgGhZSoRXDjgpIrKC3e2RFqY/brccEkC4WPQ/Am68mku1eFC0S1h1+xhiwAslp8NcwwalIy016l7FY3yX1UBoGSR+20HBMpMnaKLNV4pyAzQB0E3uuoOuSNgAJxZQ=
+  - secure: L6Wga3cnJmpPCqDU4un3vo2mlxYm1cQ9ZxvryjIYmLccNWbPZXAiLsAeOv0UdJMtGGiITC0KHVcVXZEpejExMCbVSOeIDqlZp4zbmE8l6qZMI+bIzkyA/tBlL25eq2p0jYkaUqeXTAWn1vBGiQB2Vfo+YWR4AcKXsS1eRfqiGzY=
