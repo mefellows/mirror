@@ -1,5 +1,9 @@
 package filesystem
 
+import (
+	"time"
+)
+
 type MockFileSystem struct {
 	ReadBytes []byte
 	ReadError error
@@ -26,4 +30,28 @@ func (fs *MockFileSystem) Write(File, []byte) error {
 
 func (fs *MockFileSystem) FileTree() FileTree {
 	return fs.FileTreeTree
+}
+
+type MockFile struct {
+	MockName    string    // base name of the file
+	MockPath    string    // base name of the file
+	MockSize    int64     // length in bytes for regular files; system-dependent for others
+	MockModTime time.Time // modification time
+	MockIsDir   bool      // abbreviation for Mode().IsDir()
+}
+
+func (f *MockFile) Name() string {
+	return f.MockName
+}
+func (f *MockFile) FullName() string {
+	return f.MockPath
+}
+func (f *MockFile) Size() int64 {
+	return f.MockSize
+}
+func (f *MockFile) ModTime() time.Time {
+	return f.MockModTime
+}
+func (f *MockFile) IsDir() bool {
+	return f.MockIsDir
 }

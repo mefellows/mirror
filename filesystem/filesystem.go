@@ -19,6 +19,7 @@ type FileSystem interface {
 //
 type File interface {
 	Name() string       // base name of the file
+	FullName() string   // fully qualified path to the file
 	Size() int64        // length in bytes for regular files; system-dependent for others
 	ModTime() time.Time // modification time
 	IsDir() bool        // abbreviation for Mode().IsDir()

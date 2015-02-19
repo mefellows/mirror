@@ -1,9 +1,105 @@
 package filesystem
 
 import (
+	"errors"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 )
 
-func Test(t *testing.T) {
+func init() {
+	rand.Seed(time.Now().Unix())
+	fmt.Printf("initing\n\n")
+}
+func Test_MockFileSystem(t *testing.T) {
+	mock := &MockFileSystem{}
+	mock.DirError = errors.New("Directory doesn't exist")
+	mock.Dir("foo")
+	mock.FileTree()
+	mock.Read(nil)
+	mock.Write(nil, make([]byte, 0))
+}
 
+func Test_MockFileTree(t *testing.T) {
+	tree := makeFileTree()
+	fmt.Printf("Here is a tree: %s\n", tree)
+	if tree.ParentNode() != nil {
+		t.Fatal("tree.ParentNode() should be nil")
+	}
+	if tree.ChildNodes() == nil {
+		t.Fatal("tree.ChildNodes() is nil")
+	}
+	if tree.File() == nil {
+		t.Fatal("tree.File() is nil")
+	}
+	if tree.File().Size() == 0 {
+		t.Fatal("tree.File.Size() is nil")
+	}
+	if tree.File().Name() == "" {
+		t.Fatal("tree.File.Name() is \"\"")
+	}
+	if tree.File().FullName() == "" {
+		t.Fatal("tree.File.FullName() is \"\"")
+	}
+}
+
+func makeFileTree() FileTree {
+
+	tree := &MockFileTree{}
+	tree.FileFile = makeFile(true)
+	tree.ParentNodeFileTree = nil
+	pnodes := make([]FileTree, 3)
+
+	for i := 0; i < 3; i++ {
+		nodes := make([]FileTree, 3)
+		node := &MockFileTree{}
+		node.ParentNodeFileTree = tree
+		node.FileFile = makeFile(true)
+		for j := 0; j < 3; j++ {
+			treeNode := &MockFileTree{}
+			treeNode.FileFile = makeFile(false)
+			nodes[j] = treeNode
+		}
+		node.ChildNodesArray = nodes
+		pnodes[i] = node
+	}
+	tree.ChildNodesArray = pnodes
+	return tree
+}
+
+func TestFileTreeWalk(t *testing.T) {
+	tree := makeFileTree()
+	count := 0
+	dirCount := 0
+	treeFunc := func(tree FileTree) (FileTree, error) {
+		if !tree.File().IsDir() {
+			count++
+		} else {
+			dirCount++
+		}
+		return tree, nil
+	}
+	FileTreeWalk(tree, treeFunc)
+	if count != 9 {
+		t.Fatalf("Expected to iterate over exactly 9 files, got %d", count)
+	}
+	if dirCount != 3 {
+		t.Fatalf("Expected to iterate over exactly 4 directories, got %d", dirCount)
+	}
+}
+
+func makeFile(isDir bool) File {
+	f := &MockFile{}
+	f.MockIsDir = isDir
+	f.MockSize = rand.Int63()
+	f.MockName = makeRandomWord()
+	f.MockPath = fmt.Sprintf("%s/%s", makeRandomWord(), makeRandomWord())
+	f.MockModTime = time.Now()
+	return f
+}
+
+func makeRandomWord() string {
+	words := []string{"foo", "bar", "bat", "baz", "crab", "cat", "parsnip", "apple", "futon"}
+	return words[rand.Intn(len(words))]
 }

@@ -1,5 +1,16 @@
 package filesystem
 
+import (
+//	"fmt"
+)
+
+// A FileTree of Files represented as a linked FileTree data-structure
+type FileTree interface {
+	ParentNode() FileTree
+	ChildNodes() []FileTree
+	File() File
+}
+
 // Diff two FileTrees - the result of the diff will be two Trees:
 //
 // 1. `update` containing only the updates/new additions required to be made to the target Tree
@@ -18,25 +29,15 @@ func FileTreeDiff(src FileTree, target FileTree, comparator FileComparator) (upd
 	return nil, nil, nil
 }
 
+// Recursively walk a FileTree and run a self-type function on each node.
 //
-type FileComparator interface {
-	// Compare two files and return true if they differ
-	Compare(src File, dest File) FileComparisonResult
-}
-
-type FileComparisonResult struct {
-	IsDifferent   bool
-	IsNonExistent bool
-}
-
-// Walk a FileTree and perform some operation
-func FileTreeWalk(func(*FileTree) (*FileTree, error)) error {
+// Navigates the tree in a top left to bottom right fashion
+func FileTreeWalk(tree FileTree, treeFunc func(tree FileTree) (FileTree, error)) error {
+	if len(tree.ChildNodes()) > 0 {
+		for _, node := range tree.ChildNodes() {
+			treeFunc(node)
+			FileTreeWalk(node, treeFunc)
+		}
+	}
 	return nil
-}
-
-// A FileTree of Files represented as a linked FileTree data-structure
-type FileTree interface {
-	ParentNode() FileTree
-	ChildNodes() []FileTree
-	File() File
 }
