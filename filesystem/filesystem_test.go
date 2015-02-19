@@ -1,9 +1,13 @@
 package filesystem
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -13,12 +17,31 @@ func init() {
 	fmt.Printf("initing\n\n")
 }
 func Test_MockFileSystem(t *testing.T) {
+	d1 := []byte("hello\ngo\n")
+	ioutil.WriteFile("/tmp/dat1", d1, 0644)
+
 	mock := &MockFileSystem{}
+	mockFile := makeFile(false)
+	d1 = []byte("hello\ngo\n")
+	path := fmt.Sprintf("%s%s-%d", os.TempDir(), "testmockfilesystem-", time.Now().UnixNano())
+	ioutil.WriteFile(path, d1, 0644)
+	f, _ := os.Open(path)
+	defer f.Close()
+	r := bufio.NewReader(f)
+
+	mock.ReadBytes = make([]byte, 9)
+	r.Read(mock.ReadBytes)
+	bytesRead, _ := mock.Read(mockFile)
+
+	if bytes.Compare(bytesRead, d1) != 0 {
+		t.Fatalf("File read should read the same set of bytes back. Expected %s, got %s", d1, bytesRead)
+	}
+	fmt.Printf("File: %s", bytesRead)
 	mock.DirError = errors.New("Directory doesn't exist")
 	mock.Dir("foo")
 	mock.FileTree()
-	mock.Read(nil)
 	mock.Write(nil, make([]byte, 0))
+
 }
 
 func Test_MockFileTree(t *testing.T) {
