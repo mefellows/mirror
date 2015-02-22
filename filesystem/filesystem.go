@@ -9,8 +9,9 @@ import (
 type FileSystem interface {
 	Dir(string) ([]File, error)                           // Read the contents of a directory
 	Read(File) ([]byte, error)                            // Read a File
-	Write(file File, data []byte, perm os.FileInfo) error // Write a File
+	Write(file File, data []byte, perm os.FileMode) error // Write a File
 	FileTree() FileTree                                   // Returns a FileTree structure of Files representing the FileSystem hierarchy
+	Delete(file File) error                               // Delete a file on the FileSystem
 }
 
 // Simple File abstraction (based on os.FileInfo)

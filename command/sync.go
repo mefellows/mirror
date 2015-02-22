@@ -3,6 +3,9 @@ package command
 import (
 	"flag"
 	"fmt"
+	"github.com/mefellows/mirror/filesystem"
+	fs "github.com/mefellows/mirror/filesystem/fs"
+	s3 "github.com/mefellows/mirror/filesystem/s3"
 	"strings"
 )
 
@@ -39,14 +42,49 @@ func (c *SyncCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Meta.Ui.Output(fmt.Sprintf("Would copy contents from '.' to '%s'", c.Dest))
-	c.Meta.Ui.Output(fmt.Sprintf("Here are the exclusions: ", c.Exclude))
-	c.Meta.Ui.Error("oh shiiit")
-	c.Meta.Ui.Output("Syncing from a -> b")
-	c.Meta.Ui.Info("Syncing from a -> b")
-	q, _ := c.Meta.Ui.Ask("Can you please tell me your age, little girl?")
-	c.Meta.Ui.Info(q)
+	c.Meta.Ui.Output(fmt.Sprintf("Would copy contents from '%s' to '%s'", c.Src, c.Dest))
+
+	// Obviously, this can be optimised to buffer reads directly into a write, instead of a copy and then write
+	// Possibly, pass the reader into the writer and do it that way?
+	fromFile, fromFs, _ := makeFile(c.Src)
+	toFile, toFs, _ := makeFile(c.Dest)
+	bytes, err := fromFs.Read(fromFile)
+	if err != nil {
+		fmt.Printf("Error reading from source file: %s", err.Error())
+		return 1
+	}
+	err = toFs.Write(toFile, bytes, 0644)
+	if err != nil {
+		fmt.Printf("Error writing to remote path: %s", err.Error())
+		return 1
+	}
+
 	return 0
+}
+
+// TODO: Detect File and Filesystem type
+// Register FileSystems as plugins on boot?
+func makeFile(file string) (filesystem.File, filesystem.FileSystem, error) {
+	//
+	var filesys filesystem.FileSystem
+	var f filesystem.File
+	var err error
+	switch {
+	case strings.HasPrefix(file, "s3://"):
+		filesys, err = s3.New(file)
+		f = s3.S3File{
+			// TODO: this should be in a factory method provided by the implementor
+			S3Name: file,
+		}
+	default:
+		filesys = fs.StdFileSystem{}
+		f = fs.StdFile{
+			// TODO: this should be in a factory method provided by the implementor
+			StdName: file,
+		}
+	}
+
+	return f, filesys, err
 }
 
 func (c *SyncCommand) Help() string {
@@ -57,7 +95,6 @@ Usage: mirror sync [options]
   
 Options:
 
-  -force                     Force a build to continue if artifacts exist, deletes existing artifacts
   -src                       The source directory from which to copy from
   -dest                      The destination directory from which to copy to
   -whatif                    Runs the sync operation as a dry-run (similar to the -n rsync flag)

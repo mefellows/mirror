@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"errors"
+	"fmt"
 	"github.com/mefellows/mirror/filesystem"
 	"io/ioutil"
 	"os"
@@ -12,7 +14,7 @@ type StdFileSystem struct {
 	tree filesystem.FileTree // Returns a FileTree structure of Files representing the FileSystem hierarchy
 }
 
-func (fs *StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
+func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
 	readFiles, err := ioutil.ReadDir(dir)
 	if err != nil {
 		files := make([]filesystem.File, len(readFiles))
@@ -24,54 +26,49 @@ func (fs *StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
 	} else {
 		return nil, err
 	}
-
 }
-func (fs *StdFileSystem) Read(f filesystem.File) ([]byte, error) {
+func (fs StdFileSystem) Read(f filesystem.File) ([]byte, error) {
+	fmt.Printf("File to read: %s", f.Name())
 	return ioutil.ReadFile(f.Name())
 }
 
-func (fs *StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
+func (fs StdFileSystem) Delete(file filesystem.File) error {
+	return errors.New("Function not yet implemented")
+}
+
+func (fs StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
 	return ioutil.WriteFile(file.Name(), data, perm)
 }
 
-func (fs *StdFileSystem) FileTree() filesystem.FileTree {
+func (fs StdFileSystem) FileTree() filesystem.FileTree {
 	return nil
 }
 
 type StdFile struct {
-	StdName    string    // base name of the file
-	StdPath    string    // base name of the file
-	StdSize    int64     // length in bytes for regular files; system-dependent for others
-	StdModTime time.Time // modification time
-	StdIsDir   bool      // abbreviation for Mode().IsDir()
+	StdName    string      // base name of the file
+	StdPath    string      // base name of the file
+	StdSize    int64       // length in bytes for regular files; system-dependent for others
+	StdModTime time.Time   // modification time
+	StdMode    os.FileMode // File details including perms
+	StdIsDir   bool        // abbreviation for Mode().IsDir()
 }
 
-func (f *StdFile) Name() string {
+func (f StdFile) Name() string {
 	return f.StdName
 }
 
-//func (f *StdFile) FullName() string {
-//	return f.StdPath
-//}
-func (f *StdFile) Size() int64 {
+func (f StdFile) Size() int64 {
 	return f.StdSize
 }
-func (f *StdFile) ModTime() time.Time {
+func (f StdFile) ModTime() time.Time {
 	return f.StdModTime
 }
-func (f *StdFile) IsDir() bool {
+func (f StdFile) IsDir() bool {
 	return f.StdIsDir
 }
-
-// Simple File abstraction
-//
-// All local and remote files will be represented as a File.
-// It is up to the specific FileSystem implementation to a
-//
-//type StdFile struct {
-//	Name() string // base name of the file
-//	//FullName() string   // fully qualified path to the file
-//	Size() int64        // length in bytes for regular files; system-dependent for others
-//	ModTime() time.Time // modification time
-//	IsDir() bool        // abbreviation for Mode().IsDir()
-//}
+func (f StdFile) Mode() os.FileMode {
+	return f.StdMode
+}
+func (f StdFile) Sys() interface{} {
+	return nil
+}
