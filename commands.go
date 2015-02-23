@@ -23,6 +23,16 @@ func init() {
 	}
 
 	Commands = map[string]cli.CommandFactory{
+		"daemon": func() (cli.Command, error) {
+			return &command.DaemonCommand{
+				Meta: meta,
+			}, nil
+		},
+		"remote": func() (cli.Command, error) {
+			return &command.RemoteCommand{
+				Meta: meta,
+			}, nil
+		},
 		"sync": func() (cli.Command, error) {
 			return &command.SyncCommand{
 				Meta: meta,

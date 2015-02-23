@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Basic File System implementation using OOTB Golang constructs
+// S3 File System implementation
 type S3FileSystem struct {
 	tree      filesystem.FileTree // Returns a FileTree structure of Files representing the FileSystem hierarchy
 	auth      *aws.Auth
