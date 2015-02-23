@@ -16,6 +16,8 @@ type RemoteCommand struct {
 	Meta    Meta
 	Dest    string
 	Src     string
+	Host    string
+	Port    int
 	Exclude excludes
 }
 
@@ -25,6 +27,8 @@ func (c *RemoteCommand) Run(args []string) int {
 
 	cmdFlags.StringVar(&c.Src, "src", "", "The src location to copy from")
 	cmdFlags.StringVar(&c.Dest, "dest", "", "The destination location to copy the contents of 'src' to.")
+	cmdFlags.StringVar(&c.Host, "host", "localhost", "The destination host")
+	cmdFlags.IntVar(&c.Port, "port", 8123, "The destination host")
 	cmdFlags.Var(&c.Exclude, "exclude", "Set of exclusions as POSIX regular expressions to exclude from the transfer")
 
 	// Validate
@@ -33,7 +37,7 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 
 	// Create RPC Server
-	client, err := rpc.DialHTTP("tcp", "localhost:9123")
+	client, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port))
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}
