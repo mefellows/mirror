@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Required
-domain="*.talent.seek.com.au.dev"
+domain="localhost"
 commonname=$domain
 SERVER_KEY="server.key"
 password="dummypassword"
@@ -10,9 +10,9 @@ password="dummypassword"
 country="AU"
 state="VIC"
 locality="Melbourne"
-organization="SEEK"
+organization="Matt"
 organizationalunit="IT"
-email="mario@seek.com.au"
+email="matt.fellows@onegeek.com.au"
 
 echo "Generating a custom CA for $domain"
 openssl genrsa -des3 -passout pass:$password -out ca.key 1024
