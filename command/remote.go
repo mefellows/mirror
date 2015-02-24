@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"github.com/mefellows/mirror/filesystem/fs"
 	"github.com/mefellows/mirror/filesystem/remote"
+	"io/ioutil"
 	//	s3 "github.com/mefellows/mirror/filesystem/s3"
 	"log"
 	//	"net/http"
+	"crypto/tls"
+	"crypto/x509"
 	"net/rpc"
 	"strings"
 )
@@ -36,12 +39,49 @@ func (c *RemoteCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Create RPC Server
-	client, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port))
+	// Setup trust & PKI infrastructure
+	cert, err := tls.LoadX509KeyPair("client.pem", "client.key")
+	//cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
 	if err != nil {
-		log.Fatal("dialing:", err)
+		log.Fatalf("server: loadkeys: %s", err)
+	}
+	certPool := x509.NewCertPool()
+	pemData, err := ioutil.ReadFile("ca.crt")
+	if err != nil {
+		log.Fatalf("server: read pem file: %s", err)
+	}
+	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+		log.Fatal("server: failed to parse pem data to pool")
 	}
 
+	// Configure TLS
+
+	//	config := tls.Config{
+	//		Certificates:       []tls.Certificate{cert},
+	//		ClientAuth:         tls.RequireAndVerifyClientCert,
+	//		ClientCAs:          certPool,
+	//		InsecureSkipVerify: true,
+	//	}
+	config := tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            certPool,
+		InsecureSkipVerify: true,
+	}
+	//config := tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
+
+	// Not passing through certs works - clearly have invalid client certs
+	config = tls.Config{InsecureSkipVerify: true}
+
+	// Connect to RPC server
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), &config)
+	if err != nil {
+		log.Fatalf("client: dial: %s", err)
+	}
+	defer conn.Close()
+	log.Println("client: connected to: ", conn.RemoteAddr())
+	client := rpc.NewClient(conn)
+
+	// Perform remote operation
 	fromFile := fs.StdFile{StdName: c.Src}
 	toFile := fs.StdFile{StdName: c.Dest}
 	fromFs := fs.StdFileSystem{}

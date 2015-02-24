@@ -7,8 +7,12 @@ import (
 	"log"
 	"net"
 	//	s3 "github.com/mefellows/mirror/filesystem/s3"
-	"net/http"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"net/rpc"
+	//"fmt"
+	"io/ioutil"
 	"strings"
 )
 
@@ -29,18 +33,55 @@ func (c *DaemonCommand) Run(args []string) int {
 	}
 
 	c.Meta.Ui.Output(fmt.Sprintf("Would run on port %d", c.Port))
-
 	remoteFs := new(remote.RemoteFileSystem)
 	rpc.Register(remoteFs)
-	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
-	if e != nil {
-		log.Fatal("listen error:", e)
+
+	cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	if err != nil {
+		log.Fatalf("server: loadkeys: %s", err)
 	}
-	http.Serve(l, nil)
+	certPool := x509.NewCertPool()
+	pemData, err := ioutil.ReadFile("ca.crt")
+	if err != nil {
+		log.Fatalf("server: read pem file: %s", err)
+	}
+	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+		log.Fatal("server: failed to parse pem data to pool")
+	}
+
+	config := tls.Config{
+		Certificates: []tls.Certificate{cert},
+		// TODO: Need to generate proper client certs. For now, only validate if provided
+		//ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientAuth: tls.VerifyClientCertIfGiven,
+		ClientCAs:  certPool,
+	}
+	config.Rand = rand.Reader
+	service := fmt.Sprintf(":%d", c.Port)
+	listener, err := tls.Listen("tcp", service, &config)
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
+	}
+	log.Print("server: listening")
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("server: accept: %s", err)
+			break
+		}
+		log.Printf("server: accepted from %s", conn.RemoteAddr())
+		go handleClient(conn)
+	}
 
 	return 0
 }
+
+func handleClient(conn net.Conn) {
+	defer conn.Close()
+	rpc.ServeConn(conn)
+	log.Println("server: conn: closed")
+}
+
 func (c *DaemonCommand) Help() string {
 	helpText := `
 Usage: mirror daemon [options] 
