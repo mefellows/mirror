@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mefellows/mirror/command"
 	"github.com/mitchellh/cli"
 	"os"
 )
@@ -9,7 +10,7 @@ import (
 func main() {
 	cli := cli.NewCLI("mirror", Version)
 	cli.Args = os.Args[1:]
-	cli.Commands = Commands
+	cli.Commands = command.Commands
 
 	exitStatus, err := cli.Run()
 	if err != nil {

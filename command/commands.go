@@ -1,7 +1,6 @@
-package main
+package command
 
 import (
-	"github.com/mefellows/mirror/command"
 	"github.com/mitchellh/cli"
 	"os"
 )
@@ -18,23 +17,28 @@ func init() {
 		ErrorColor:  cli.UiColorRed,
 	}
 
-	meta := command.Meta{
+	meta := Meta{
 		Ui: Ui,
 	}
 
 	Commands = map[string]cli.CommandFactory{
 		"daemon": func() (cli.Command, error) {
-			return &command.DaemonCommand{
+			return &DaemonCommand{
 				Meta: meta,
 			}, nil
 		},
 		"remote": func() (cli.Command, error) {
-			return &command.RemoteCommand{
+			return &RemoteCommand{
 				Meta: meta,
 			}, nil
 		},
 		"sync": func() (cli.Command, error) {
-			return &command.SyncCommand{
+			return &SyncCommand{
+				Meta: meta,
+			}, nil
+		},
+		"pki": func() (cli.Command, error) {
+			return &PkiCommand{
 				Meta: meta,
 			}, nil
 		},

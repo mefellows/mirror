@@ -40,13 +40,13 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 
 	// Setup trust & PKI infrastructure
-	cert, err := tls.LoadX509KeyPair("client.pem", "client.key")
-	//cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	cert, err := tls.LoadX509KeyPair("cert.pem", "cert-key.pem")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
 	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile("ca.crt")
+	//pemData, err := ioutil.ReadFile("ca.crt")
+	pemData, err := ioutil.ReadFile("cert.pem")
 	if err != nil {
 		log.Fatalf("server: read pem file: %s", err)
 	}
@@ -55,22 +55,12 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 
 	// Configure TLS
-
-	//	config := tls.Config{
-	//		Certificates:       []tls.Certificate{cert},
-	//		ClientAuth:         tls.RequireAndVerifyClientCert,
-	//		ClientCAs:          certPool,
-	//		InsecureSkipVerify: true,
-	//	}
 	config := tls.Config{
-		Certificates:       []tls.Certificate{cert},
-		RootCAs:            certPool,
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      certPool,
+		//ClientAuth:   tls.RequireAndVerifyClientCert,
 		InsecureSkipVerify: true,
 	}
-	//config := tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
-
-	// Not passing through certs works - clearly have invalid client certs
-	config = tls.Config{InsecureSkipVerify: true}
 
 	// Connect to RPC server
 	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), &config)
@@ -110,6 +100,9 @@ Options:
 
   -src                       The source directory from which to copy from
   -dest                      The destination directory from which to copy to
+  -host                      The remote host to sync the files/folders with. Defaults to 'localhost'
+  -port                      The port on the remote host to connect to. Defaults to 8123
+  -insecure					 The file transfer should be performed over an unencrypted connection
 `
 
 	return strings.TrimSpace(helpText)

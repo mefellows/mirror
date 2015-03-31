@@ -13,6 +13,22 @@ import (
 	"time"
 )
 
+type WriteRequest struct {
+	// TODO: How do we make this protocol agnostic??
+	// "type not registered for interface: fs.StdFile"
+	File filesystem.File
+	//File fs.StdFile
+	Data []byte
+	Perm os.FileMode
+}
+type WriteResponse struct {
+	Success bool
+}
+
+func (f *S3FileSystem) WriteRemote(req *WriteRequest, res *WriteResponse) error {
+	return nil
+}
+
 // S3 File System implementation
 type S3FileSystem struct {
 	tree      filesystem.FileTree // Returns a FileTree structure of Files representing the FileSystem hierarchy

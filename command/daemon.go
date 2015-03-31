@@ -1,24 +1,25 @@
 package command
 
 import (
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem/remote"
 	"log"
 	"net"
-	//	s3 "github.com/mefellows/mirror/filesystem/s3"
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
 	"net/rpc"
 	//"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
 type DaemonCommand struct {
-	Meta Meta
-	Port int // Which port to listen on
+	Meta     Meta
+	Port     int  // Which port to listen on
+	Insecure bool // Enable/Disable TLS
 }
 
 func (c *DaemonCommand) Run(args []string) int {
@@ -26,6 +27,7 @@ func (c *DaemonCommand) Run(args []string) int {
 	cmdFlags.Usage = func() { c.Meta.Ui.Output(c.Help()) }
 
 	cmdFlags.IntVar(&c.Port, "port", 8123, "The http port to listen on")
+	cmdFlags.BoolVar(&c.Insecure, "insecure", false, "Disable TLS connection")
 
 	// Validate
 	if err := cmdFlags.Parse(args); err != nil {
@@ -36,12 +38,16 @@ func (c *DaemonCommand) Run(args []string) int {
 	remoteFs := new(remote.RemoteFileSystem)
 	rpc.Register(remoteFs)
 
-	cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
+	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
+	caKeyPath := filepath.Join(pkiHomeDir, "key.pem")
+
+	cert, err := tls.LoadX509KeyPair(caCertPath, caKeyPath)
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
 	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile("ca.crt")
+	pemData, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
 		log.Fatalf("server: read pem file: %s", err)
 	}
@@ -51,10 +57,8 @@ func (c *DaemonCommand) Run(args []string) int {
 
 	config := tls.Config{
 		Certificates: []tls.Certificate{cert},
-		// TODO: Need to generate proper client certs. For now, only validate if provided
-		//ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  certPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
 	}
 	config.Rand = rand.Reader
 	service := fmt.Sprintf(":%d", c.Port)
@@ -91,7 +95,7 @@ Usage: mirror daemon [options]
 Options:
 
   -port                       The http(s) port to listen on
-  -secure					  Enable SSL security on the connection
+  -insecure					  Disable SSL security on the connection
 `
 
 	return strings.TrimSpace(helpText)
