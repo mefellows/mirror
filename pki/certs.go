@@ -73,6 +73,7 @@ func GenerateCACertificate(certFile, keyFile, org string, bits int) error {
 	}
 
 	template.IsCA = true
+	template.Subject.CommonName = "Mirror CA Root"
 	template.KeyUsage |= x509.KeyUsageCertSign
 
 	priv, err := rsa.GenerateKey(rand.Reader, bits)
@@ -118,6 +119,7 @@ func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org stri
 	if len(hosts) == 1 && hosts[0] == "" {
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 		template.KeyUsage = x509.KeyUsageDigitalSignature
+		//template.DNSNames = []string{"localhost"}
 	} else { // server
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 		for _, h := range hosts {
@@ -128,6 +130,7 @@ func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org stri
 				template.DNSNames = append(template.DNSNames, h)
 			}
 		}
+		//template.DNSNames = []string{"localhost"}
 	}
 
 	tlsCert, err := tls.LoadX509KeyPair(caFile, caKeyFile)

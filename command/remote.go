@@ -6,6 +6,7 @@ import (
 	"github.com/mefellows/mirror/filesystem/fs"
 	"github.com/mefellows/mirror/filesystem/remote"
 	"io/ioutil"
+	"path/filepath"
 	//	s3 "github.com/mefellows/mirror/filesystem/s3"
 	"log"
 	//	"net/http"
@@ -16,12 +17,15 @@ import (
 )
 
 type RemoteCommand struct {
-	Meta    Meta
-	Dest    string
-	Src     string
-	Host    string
-	Port    int
-	Exclude excludes
+	Meta     Meta
+	Dest     string
+	Src      string
+	Host     string
+	Port     int
+	Cert     string
+	CertKey  string
+	Insecure bool
+	Exclude  excludes
 }
 
 func (c *RemoteCommand) Run(args []string) int {
@@ -31,7 +35,9 @@ func (c *RemoteCommand) Run(args []string) int {
 	cmdFlags.StringVar(&c.Src, "src", "", "The src location to copy from")
 	cmdFlags.StringVar(&c.Dest, "dest", "", "The destination location to copy the contents of 'src' to.")
 	cmdFlags.StringVar(&c.Host, "host", "localhost", "The destination host")
+	cmdFlags.StringVar(&c.Cert, "cert", "", "The location of a client certificate to use")
 	cmdFlags.IntVar(&c.Port, "port", 8123, "The destination host")
+	cmdFlags.BoolVar(&c.Insecure, "insecure", false, "Run operation over an insecure connection")
 	cmdFlags.Var(&c.Exclude, "exclude", "Set of exclusions as POSIX regular expressions to exclude from the transfer")
 
 	// Validate
@@ -40,13 +46,17 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 
 	// Setup trust & PKI infrastructure
-	cert, err := tls.LoadX509KeyPair("cert.pem", "cert-key.pem")
+	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
+	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
+	clientCertPath := "cert.pem"
+	clientKeyPath := "cert-key.pem"
+
+	cert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
 	certPool := x509.NewCertPool()
-	//pemData, err := ioutil.ReadFile("ca.crt")
-	pemData, err := ioutil.ReadFile("cert.pem")
+	pemData, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
 		log.Fatalf("server: read pem file: %s", err)
 	}
@@ -59,7 +69,6 @@ func (c *RemoteCommand) Run(args []string) int {
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      certPool,
 		//ClientAuth:   tls.RequireAndVerifyClientCert,
-		InsecureSkipVerify: true,
 	}
 
 	// Connect to RPC server
@@ -76,22 +85,26 @@ func (c *RemoteCommand) Run(args []string) int {
 	toFile := fs.StdFile{StdName: c.Dest}
 	fromFs := fs.StdFileSystem{}
 	bytes, err := fromFs.Read(fromFile)
+	if err != nil {
+		c.Meta.Ui.Error(fmt.Sprintf("Error reading from source file: %s", err.Error()))
+		return 1
+	}
 	rpcargs := &remote.WriteRequest{toFile, bytes, 0644}
 	var reply remote.WriteResponse
 	err = client.Call("RemoteFileSystem.Write", rpcargs, &reply)
-	if err != nil {
-		log.Fatal("remoteFileSystem error:", err)
-	}
-	fmt.Printf("Write. to file: %s, response: %s", rpcargs.File.Name(), reply)
 
-	c.Meta.Ui.Output(fmt.Sprintf("Would copy contents from '%s' to '%s' over a remote connection", c.Src, c.Dest))
+	if reply.Success {
+		c.Meta.Ui.Output(fmt.Sprintf("Copied '%s' to '%s'", c.Src, c.Dest))
+	} else {
+		c.Meta.Ui.Error(fmt.Sprintf("Unable to copy '%s' to '%s'. Error: %s", c.Src, c.Dest, err))
+		return 1
+	}
 
 	return 0
 }
 
 func (c *RemoteCommand) Help() string {
 	helpText := `
-	"flag"
 Usage: mirror remote [options] 
 
   Copy the contents of the source directory (-src) to the destination directory (-dest) recursively.

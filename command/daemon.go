@@ -40,9 +40,10 @@ func (c *DaemonCommand) Run(args []string) int {
 
 	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
 	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
-	caKeyPath := filepath.Join(pkiHomeDir, "key.pem")
+	serverCertPath := filepath.Join(pkiHomeDir, "server-cert.pem")
+	serverKeyPath := filepath.Join(pkiHomeDir, "server-key.pem")
 
-	cert, err := tls.LoadX509KeyPair(caCertPath, caKeyPath)
+	cert, err := tls.LoadX509KeyPair(serverCertPath, serverKeyPath)
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}

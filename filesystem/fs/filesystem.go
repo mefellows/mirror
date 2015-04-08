@@ -2,7 +2,6 @@ package fs
 
 import (
 	"errors"
-	"fmt"
 	"github.com/mefellows/mirror/filesystem"
 	"io/ioutil"
 	"os"
@@ -28,7 +27,6 @@ func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
 	}
 }
 func (fs StdFileSystem) Read(f filesystem.File) ([]byte, error) {
-	fmt.Printf("File to read: %s", f.Name())
 	return ioutil.ReadFile(f.Name())
 }
 
