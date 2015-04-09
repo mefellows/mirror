@@ -143,6 +143,14 @@ func (p *PKI) Configure() (tls.Config, error) {
 	return config, nil
 }
 
+func (p *PKI) OutputCACert() string {
+	f, err := ioutil.ReadFile(p.Config.caCertPath)
+	if err == nil {
+		return string(f)
+	}
+	return ""
+}
+
 func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 
 	cert, err := tls.LoadX509KeyPair(p.Config.clientCertPath, p.Config.clientKeyPath)
@@ -165,6 +173,7 @@ func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 
 	return config, err
 }
+
 func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 
 	cert, err := tls.LoadX509KeyPair(p.Config.serverCertPath, p.Config.serverKeyPath)
