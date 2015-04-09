@@ -2,7 +2,8 @@ package command
 
 import (
 	"flag"
-	"github.com/mefellows/mirror/mirror"
+	//"github.com/mefellows/mirror/mirror"
+	"github.com/mefellows/mirror/pki"
 	"strings"
 )
 
@@ -24,6 +25,7 @@ func (c *PkiCommand) Run(args []string) int {
 	cmdFlags.BoolVar(&c.configure, "configure", false, "Configures a default PKI infrastructure")
 	cmdFlags.BoolVar(&c.removePKI, "removePKI", false, "Remove existing PKI keys and certs. Warning: This will require trust to be setup amongst other mirror nodes")
 	cmdFlags.BoolVar(&c.generateCert, "generateCert", false, "Generate a custom cert from this mirror nodes' CA")
+	pki := pki.New()
 
 	// Validate
 	if err := cmdFlags.Parse(args); err != nil {
@@ -32,7 +34,7 @@ func (c *PkiCommand) Run(args []string) int {
 
 	if c.configure || c.generateCA {
 		c.Meta.Ui.Output("Setting up PKI...")
-		err := mirror.SetupPKI(c.caHost)
+		err := pki.SetupPKI(c.caHost)
 		if err != nil {
 			c.Meta.Ui.Error(err.Error())
 		}
@@ -41,7 +43,7 @@ func (c *PkiCommand) Run(args []string) int {
 
 	if c.removePKI {
 		c.Meta.Ui.Output("Removing existing PKI")
-		err := mirror.RemovePKI()
+		err := pki.RemovePKI()
 		if err != nil {
 			c.Meta.Ui.Error(err.Error())
 		}
@@ -50,8 +52,8 @@ func (c *PkiCommand) Run(args []string) int {
 
 	if c.generateCert {
 		c.Meta.Ui.Output("Generating a client cert")
-		err := mirror.GenerateCert()
-		//err := mirror.GenerateCert([]string{"localhost"})
+		//err := pki.GenerateCert()
+		err := pki.GenerateCert([]string{"localhost"})
 		if err != nil {
 			c.Meta.Ui.Error(err.Error())
 		}

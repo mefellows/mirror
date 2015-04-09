@@ -16,53 +16,6 @@ import (
 	"time"
 )
 
-func getTLSConfig(caCert, cert, key []byte, allowInsecure bool) (*tls.Config, error) {
-	// TLS config
-	var tlsConfig tls.Config
-	tlsConfig.InsecureSkipVerify = allowInsecure
-	certPool := x509.NewCertPool()
-
-	certPool.AppendCertsFromPEM(caCert)
-	tlsConfig.RootCAs = certPool
-	keypair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return &tlsConfig, err
-	}
-	tlsConfig.Certificates = []tls.Certificate{keypair}
-	if allowInsecure {
-		tlsConfig.InsecureSkipVerify = true
-	}
-
-	return &tlsConfig, nil
-}
-
-func newCertificate(org string) (*x509.Certificate, error) {
-	now := time.Now()
-	// need to set notBefore slightly in the past to account for time
-	// skew in the VMs otherwise the certs sometimes are not yet valid
-	notBefore := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()-5, 0, 0, time.Local)
-	notAfter := notBefore.Add(time.Hour * 24 * 1080)
-
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		return nil, err
-	}
-
-	return &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			Organization: []string{org},
-		},
-		NotBefore: notBefore,
-		NotAfter:  notAfter,
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		BasicConstraintsValid: true,
-	}, nil
-
-}
-
 // GenerateCACertificate generates a new certificate authority from the specified org
 // and bit size and stores the resulting certificate and key file
 // in the arguments.
@@ -119,7 +72,6 @@ func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org stri
 	if len(hosts) == 1 && hosts[0] == "" {
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 		template.KeyUsage = x509.KeyUsageDigitalSignature
-		//template.DNSNames = []string{"localhost"}
 	} else { // server
 		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
 		for _, h := range hosts {
@@ -130,7 +82,6 @@ func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org stri
 				template.DNSNames = append(template.DNSNames, h)
 			}
 		}
-		//template.DNSNames = []string{"localhost"}
 	}
 
 	tlsCert, err := tls.LoadX509KeyPair(caFile, caKeyFile)
@@ -207,4 +158,32 @@ func ValidateCertificate(addr, caCertPath, serverCertPath, serverKeyPath string)
 	}
 
 	return true, nil
+}
+
+// Creates a certificate template for use by the main Certificate methods
+func newCertificate(org string) (*x509.Certificate, error) {
+	now := time.Now()
+	// need to set notBefore slightly in the past to account for time
+	// skew in the VMs otherwise the certs sometimes are not yet valid
+	notBefore := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute()-5, 0, 0, time.Local)
+	notAfter := notBefore.Add(time.Hour * 24 * 1080)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{org},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+	}, nil
+
 }
