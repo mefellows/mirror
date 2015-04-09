@@ -1,17 +1,13 @@
 package command
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem/fs"
 	"github.com/mefellows/mirror/filesystem/remote"
-	"io/ioutil"
-	"path/filepath"
-	//	s3 "github.com/mefellows/mirror/filesystem/s3"
+	"github.com/mefellows/mirror/pki"
 	"log"
-	//	"net/http"
-	"crypto/tls"
-	"crypto/x509"
 	"net/rpc"
 	"strings"
 )
@@ -45,34 +41,15 @@ func (c *RemoteCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Setup trust & PKI infrastructure
-	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
-	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
-	clientCertPath := "cert.pem"
-	clientKeyPath := "cert-key.pem"
-
-	cert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
+	pkiMgr := pki.New()
+	config, err := pkiMgr.GetClientTLSConfig()
 	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
-	}
-	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(caCertPath)
-	if err != nil {
-		log.Fatalf("server: read pem file: %s", err)
-	}
-	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
-		log.Fatal("server: failed to parse pem data to pool")
-	}
-
-	// Configure TLS
-	config := tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      certPool,
-		//ClientAuth:   tls.RequireAndVerifyClientCert,
+		log.Fatalf("Error creating TLS Config: %s", err)
+		c.Meta.Ui.Error(fmt.Sprintf("Error setting up Secure communications: %s", err.Error()))
 	}
 
 	// Connect to RPC server
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), &config)
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), config)
 	if err != nil {
 		log.Fatalf("client: dial: %s", err)
 	}

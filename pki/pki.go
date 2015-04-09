@@ -1,24 +1,24 @@
 package pki
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/mefellows/mirror/mirror"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 )
 
-// Check for custom Certificate Authorities
-
-// Check for server certificates (must be present for TLS to occur safely)
-
-// Generate a client cert?
-
 // General Mirror Pubic Key Infrastructure functions
+
 type PKI struct {
+	Config *Config
 }
 
-type tlsConfig struct {
+type Config struct {
 	clientKeyPath  string
 	clientCertPath string
 	serverKeyPath  string
@@ -28,35 +28,62 @@ type tlsConfig struct {
 }
 
 func New() *PKI {
-	return nil
+	return &PKI{Config: getDefaultConfig()}
+}
+
+func getDefaultConfig() *Config {
+	caHomeDir := mirror.GetCADir()
+	certDir := mirror.GetCertDir()
+	caCertPath := filepath.Join(caHomeDir, "ca.pem")
+	caKeyPath := filepath.Join(caHomeDir, "key.pem")
+	certPath := filepath.Join(certDir, "cert.pem")
+	keyPath := filepath.Join(certDir, "cert-key.pem")
+	serverCertPath := filepath.Join(certDir, "server-cert.pem")
+	serverKeyPath := filepath.Join(certDir, "server-key.pem")
+
+	return &Config{
+		clientKeyPath:  keyPath,
+		clientCertPath: certPath,
+		caCertPath:     caCertPath,
+		caKeyPath:      caKeyPath,
+		serverCertPath: serverCertPath,
+		serverKeyPath:  serverKeyPath,
+	}
 }
 
 func (p *PKI) RemovePKI() error {
-	// TODO: Get Base Config containing Home Dir
-	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
-	err := os.RemoveAll(pkiHomeDir)
+	// Root CA + Certificates
+	err := os.RemoveAll(path.Dir(p.Config.caCertPath))
+	if err != nil {
+		return err
+	}
+
+	// Client certificates
+	err = os.RemoveAll(path.Dir(p.Config.clientCertPath))
+	if err != nil {
+		return err
+	}
+
+	// Server certificates
+	err = os.RemoveAll(path.Dir(p.Config.serverKeyPath))
+	if err != nil {
+		return err
+	}
 
 	return err
 }
 
 func (p *PKI) GenerateCert(hosts []string) (err error) {
-	outputDir := filepath.Dir(".")
-	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
-	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
-	caKeyPath := filepath.Join(pkiHomeDir, "key.pem")
-	certPath := filepath.Join(outputDir, "cert.pem")
-	keyPath := filepath.Join(outputDir, "cert-key.pem")
 	testOrg := "client"
 	bits := 2048
 
 	if len(hosts) == 0 {
 		hosts = []string{}
 	}
-
-	err = GenerateCert(hosts, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits)
+	err = GenerateCert(hosts, p.Config.clientCertPath, p.Config.clientKeyPath, p.Config.caCertPath, p.Config.caKeyPath, testOrg, bits)
 	if err == nil {
-		_, err = os.Stat(certPath)
-		_, err = os.Stat(keyPath)
+		_, err = os.Stat(p.Config.clientCertPath)
+		_, err = os.Stat(p.Config.clientKeyPath)
 	}
 	return
 }
@@ -79,41 +106,30 @@ func (p *PKI) CheckSetup() error {
 // Sets up the PKI infrastructure for client / server communications
 // This involves creating directories, CAs, and client/server certs
 func (p *PKI) SetupPKI(caHost string) error {
-
-	// Ensure all paths are
-
-	// TODO: Get Base Config containing Home Dir
-	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
-	os.Mkdir(pkiHomeDir, 0700)
-
-	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
-	caKeyPath := filepath.Join(pkiHomeDir, "key.pem")
 	bits := 2048
-	if _, err := os.Stat(caCertPath); err == nil {
+	if _, err := os.Stat(p.Config.caCertPath); err == nil {
 		return fmt.Errorf("CA already exists. Run --delete to remove the old CA.")
 	}
 
-	if err := GenerateCACertificate(caCertPath, caKeyPath, caHost, bits); err != nil {
+	if err := GenerateCACertificate(p.Config.caCertPath, p.Config.caKeyPath, caHost, bits); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	if _, err := os.Stat(caCertPath); err != nil {
+	if _, err := os.Stat(p.Config.caCertPath); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	if _, err := os.Stat(caKeyPath); err != nil {
+	if _, err := os.Stat(p.Config.caKeyPath); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	serverCertPath := filepath.Join(pkiHomeDir, "server-cert.pem")
-	serverKeyPath := filepath.Join(pkiHomeDir, "server-key.pem")
 	testOrg := "localhost"
 	hosts := []string{"localhost"}
 
-	err := GenerateCert(hosts, serverCertPath, serverKeyPath, caCertPath, caKeyPath, testOrg, bits)
+	err := GenerateCert(hosts, p.Config.serverCertPath, p.Config.serverKeyPath, p.Config.caCertPath, p.Config.caKeyPath, testOrg, bits)
 	if err == nil {
-		_, err = os.Stat(serverCertPath)
-		_, err = os.Stat(serverKeyPath)
+		_, err = os.Stat(p.Config.serverCertPath)
+		_, err = os.Stat(p.Config.serverKeyPath)
 	}
 
 	return nil
@@ -127,22 +143,49 @@ func (p *PKI) Configure() (tls.Config, error) {
 	return config, nil
 }
 
-func getTLSConfig(caCert, cert, key []byte, allowInsecure bool) (*tls.Config, error) {
-	// TLS config
-	var tlsConfig tls.Config
-	tlsConfig.InsecureSkipVerify = allowInsecure
-	certPool := x509.NewCertPool()
+func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 
-	certPool.AppendCertsFromPEM(caCert)
-	tlsConfig.RootCAs = certPool
-	keypair, err := tls.X509KeyPair(cert, key)
+	cert, err := tls.LoadX509KeyPair(p.Config.clientCertPath, p.Config.clientKeyPath)
 	if err != nil {
-		return &tlsConfig, err
+		return nil, err
 	}
-	tlsConfig.Certificates = []tls.Certificate{keypair}
-	if allowInsecure {
-		tlsConfig.InsecureSkipVerify = true
+	certPool := x509.NewCertPool()
+	pemData, err := ioutil.ReadFile(p.Config.caCertPath)
+	if err != nil {
+		return nil, err
+	}
+	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+		return nil, err
 	}
 
-	return &tlsConfig, nil
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      certPool,
+	}
+
+	return config, err
+}
+func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
+
+	cert, err := tls.LoadX509KeyPair(p.Config.serverCertPath, p.Config.serverKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	certPool := x509.NewCertPool()
+	pemData, err := ioutil.ReadFile(p.Config.caCertPath)
+	if err != nil {
+		return nil, err
+	}
+	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+		return nil, err
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    certPool,
+		Rand:         rand.Reader,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}
+
+	return config, err
 }

@@ -1,18 +1,15 @@
 package command
 
 import (
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem/remote"
+	"github.com/mefellows/mirror/pki"
 	"log"
 	"net"
 	"net/rpc"
 	//"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 )
 
@@ -38,32 +35,13 @@ func (c *DaemonCommand) Run(args []string) int {
 	remoteFs := new(remote.RemoteFileSystem)
 	rpc.Register(remoteFs)
 
-	pkiHomeDir := "/Users/mfellows/.mirror.d/pki"
-	caCertPath := filepath.Join(pkiHomeDir, "ca.pem")
-	serverCertPath := filepath.Join(pkiHomeDir, "server-cert.pem")
-	serverKeyPath := filepath.Join(pkiHomeDir, "server-key.pem")
-
-	cert, err := tls.LoadX509KeyPair(serverCertPath, serverKeyPath)
-	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
-	}
-	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(caCertPath)
-	if err != nil {
-		log.Fatalf("server: read pem file: %s", err)
-	}
-	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
-		log.Fatal("server: failed to parse pem data to pool")
-	}
-
-	config := tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-	}
-	config.Rand = rand.Reader
 	service := fmt.Sprintf(":%d", c.Port)
-	listener, err := tls.Listen("tcp", service, &config)
+	pkiMgr := pki.New()
+	config, err := pkiMgr.GetServerTLSConfig()
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
+	}
+	listener, err := tls.Listen("tcp", service, config)
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}

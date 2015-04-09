@@ -2,12 +2,11 @@ package mirror
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 func GetHomeDir() string {
@@ -23,6 +22,10 @@ func GetMirrorDir() string {
 		dir = filepath.Join(GetHomeDir(), ".mirror.d")
 	}
 	return dir
+}
+
+func GetCADir() string {
+	return filepath.Join(GetMirrorDir(), "ca")
 }
 
 func GetCertDir() string {

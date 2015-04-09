@@ -9,7 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
+	//"io/ioutil"
 	"math/big"
 	"net"
 	"os"
@@ -127,6 +127,7 @@ func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org stri
 	return nil
 }
 
+/*
 func ValidateCertificate(addr, caCertPath, serverCertPath, serverKeyPath string) (bool, error) {
 	caCert, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
@@ -159,6 +160,7 @@ func ValidateCertificate(addr, caCertPath, serverCertPath, serverKeyPath string)
 
 	return true, nil
 }
+*/
 
 // Creates a certificate template for use by the main Certificate methods
 func newCertificate(org string) (*x509.Certificate, error) {
