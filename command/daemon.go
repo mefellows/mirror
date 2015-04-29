@@ -36,7 +36,15 @@ func (c *DaemonCommand) Run(args []string) int {
 	rpc.Register(remoteFs)
 
 	service := fmt.Sprintf(":%d", c.Port)
-	pkiMgr := pki.New()
+	pkiMgr, err := pki.New()
+	if err != nil {
+		c.Meta.Ui.Error(fmt.Sprintf("Unable to setup public key infrastructure: %s", err.Error()))
+		return 1
+	}
+	if err != nil {
+		c.Meta.Ui.Error(fmt.Sprintf("Unable to setup PKI infrastructure for daemon: %s", err.Error()))
+		log.Fatalf("server: listen: %s", err)
+	}
 	config, err := pkiMgr.GetServerTLSConfig()
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)

@@ -2,19 +2,27 @@ package command
 
 import (
 	"flag"
+	"fmt"
 	//"github.com/mefellows/mirror/mirror"
 	"github.com/mefellows/mirror/pki"
 	"strings"
 )
 
 type PkiCommand struct {
-	Meta         Meta
-	generateCA   bool
-	caHost       string
-	outputCA     bool
-	generateCert bool
-	configure    bool
-	removePKI    bool
+	Meta             Meta
+	generateCA       bool
+	caHost           string
+	outputCA         bool
+	inputClientCert  bool
+	inputClientKey   bool
+	outputClientCert bool
+	outputClientKey  bool
+	certFile         string
+	keyFile          string
+	trustCA          string
+	generateCert     bool
+	configure        bool
+	removePKI        bool
 }
 
 func (c *PkiCommand) Run(args []string) int {
@@ -23,11 +31,18 @@ func (c *PkiCommand) Run(args []string) int {
 
 	cmdFlags.BoolVar(&c.generateCA, "generateCA", false, "Generate a custom CA for this mirror node")
 	cmdFlags.StringVar(&c.caHost, "caHost", "localhost", "Specify the CAs custom hostname")
+	cmdFlags.StringVar(&c.trustCA, "trustCA", "", "Path to CA Cert to import")
 	cmdFlags.BoolVar(&c.configure, "configure", false, "Configures a default PKI infrastructure")
 	cmdFlags.BoolVar(&c.removePKI, "removePKI", false, "Remove existing PKI keys and certs. Warning: This will require trust to be setup amongst other mirror nodes")
 	cmdFlags.BoolVar(&c.outputCA, "outputCA", false, "Output the CA Certificate of this mirror node")
+	cmdFlags.BoolVar(&c.outputClientCert, "outputClientCert", false, "Output the Client Certificate")
+	cmdFlags.BoolVar(&c.outputClientKey, "outputClientKey", false, "Output the Client Key")
 	cmdFlags.BoolVar(&c.generateCert, "generateCert", false, "Generate a custom cert from this mirror nodes' CA")
-	pki := pki.New()
+	pki, err := pki.New()
+	if err != nil {
+		c.Meta.Ui.Error(fmt.Sprintf("Unable to setup public key infrastructure: %s", err.Error()))
+		return 1
+	}
 
 	// Validate
 	if err := cmdFlags.Parse(args); err != nil {
@@ -36,6 +51,16 @@ func (c *PkiCommand) Run(args []string) int {
 
 	if c.outputCA {
 		cert := pki.OutputCACert()
+		c.Meta.Ui.Output(cert)
+	}
+
+	if c.outputClientCert {
+		cert := pki.OutputClientCert()
+		c.Meta.Ui.Output(cert)
+	}
+
+	if c.outputClientKey {
+		cert := pki.OutputClientKey()
 		c.Meta.Ui.Output(cert)
 	}
 
@@ -80,8 +105,14 @@ Usage: mirror pki [options]
 Options:
 
   --configure                 Setup PKI infrastructure on this Mirror node.
-  --trustCa                   Trust the provided CA (often used to trust other Mirror node CAs).
-  --outputCa                  Output the CA Certificate for this mirror node. 
+  --trustCA                   Trust the provided CA (often used to trust other Mirror node CAs).
+  --outputCA                  Output the CA Certificate for this mirror node. 
+  --inputClientCert           Output the current Client Certificate (.crt).
+  --inputClientKey            Output the current Client Key (.pem) file.
+  --outputClientCert          Output the current Client Certificate (.crt).
+  --outputClientKey           Output the current Client Key (.pem) file.
+  --certFile                  Path to the certificate (.crt) when importing.
+  --keyFile                   Path to the key (.pem) when importing.
   --generateCert              Generate a client cert trusted by this Mirror nodes CA.
   --removePKI                 Removes existing PKI.
 `

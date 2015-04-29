@@ -41,7 +41,11 @@ func (c *RemoteCommand) Run(args []string) int {
 		return 1
 	}
 
-	pkiMgr := pki.New()
+	pkiMgr, err := pki.New()
+	if err != nil {
+		c.Meta.Ui.Error(fmt.Sprintf("Unable to setup public key infrastructure: %s", err.Error()))
+		return 1
+	}
 	config, err := pkiMgr.GetClientTLSConfig()
 	if err != nil {
 		log.Fatalf("Error creating TLS Config: %s", err)

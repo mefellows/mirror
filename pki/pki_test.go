@@ -15,7 +15,7 @@ var (
 
 func defaultPki() *PKI {
 	os.Setenv("MIRROR_HOME", tmpDir)
-	pki := New()
+	pki, _ := New()
 	return pki
 }
 
