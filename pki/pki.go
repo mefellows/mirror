@@ -135,14 +135,6 @@ func (p *PKI) SetupPKI(caHost string) error {
 	return nil
 }
 
-func (p *PKI) Configure() (tls.Config, error) {
-
-	config := tls.Config{}
-
-	// TODO: Autoimport/discover CA & CACerts from MIRROR_HOME/pki/cas?
-	return config, nil
-}
-
 func (p *PKI) OutputCACert() string {
 	f, err := ioutil.ReadFile(p.Config.caCertPath)
 	if err == nil {
@@ -157,12 +149,9 @@ func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(p.Config.caCertPath)
+
+	certPool, err := p.discoverCAs()
 	if err != nil {
-		return nil, err
-	}
-	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
 		return nil, err
 	}
 
@@ -180,12 +169,9 @@ func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	certPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(p.Config.caCertPath)
+
+	certPool, err := p.discoverCAs()
 	if err != nil {
-		return nil, err
-	}
-	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
 		return nil, err
 	}
 
@@ -197,4 +183,24 @@ func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 	}
 
 	return config, err
+}
+
+func (p *PKI) discoverCAs() (*x509.CertPool, error) {
+	certPool := x509.NewCertPool()
+
+	// Default Root CA
+	caPaths := []string{p.Config.caCertPath}
+	var err error
+
+	for _, cert := range caPaths {
+		pemData, err := ioutil.ReadFile(cert)
+		if err != nil {
+			return nil, err
+		}
+		if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+			return nil, err
+		}
+	}
+
+	return certPool, err
 }
