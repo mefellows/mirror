@@ -61,7 +61,34 @@ func TestGenerateCert(t *testing.T) {
 	}
 	os.Setenv("MACHINE_DIR", "")
 
-	if err := GenerateCert([]string{}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+	// Client Cert
+	if err := GenerateCert([]string{""}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(certPath); err != nil {
+		t.Fatalf("certificate not created at %s", certPath)
+	}
+
+	if _, err := os.Stat(keyPath); err != nil {
+		t.Fatalf("key not created at %s", keyPath)
+	}
+
+	// Hostname Cert
+	if err := GenerateCert([]string{"foo.com"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(certPath); err != nil {
+		t.Fatalf("certificate not created at %s", certPath)
+	}
+
+	if _, err := os.Stat(keyPath); err != nil {
+		t.Fatalf("key not created at %s", keyPath)
+	}
+
+	// IP based cert
+	if err := GenerateCert([]string{"127.0.0.1"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
 		t.Fatal(err)
 	}
 
