@@ -79,3 +79,17 @@ func TestSetupPKI(t *testing.T) {
 func TestRemovePKI(t *testing.T) {
 
 }
+
+func TestGetServerTLSConfig(t *testing.T) {
+	// SSL
+	// Insecure
+	// Invalid SSL
+	// Invalid Client Cert
+}
+
+func TestGetClientTLSConfig(t *testing.T) {
+	// SSL
+	// Insecure
+	// Invalid SSL
+	// Invalid Client Cert
+}

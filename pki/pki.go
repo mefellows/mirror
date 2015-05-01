@@ -4,12 +4,11 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
+	"log"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -26,6 +25,15 @@ type Config struct {
 	serverCertPath string
 	caKeyPath      string
 	caCertPath     string
+	Insecure       bool
+}
+
+func NewWithConfig(config *Config) (*PKI, error) {
+	pki := &PKI{Config: config}
+	if err := pki.SetupPKI("localhost"); err != nil {
+		return nil, err
+	}
+	return pki, nil
 }
 
 func New() (*PKI, error) {
@@ -58,19 +66,19 @@ func getDefaultConfig() *Config {
 
 func (p *PKI) RemovePKI() error {
 	// Root CA + Certificates
-	err := os.RemoveAll(path.Dir(p.Config.caCertPath))
+	err := os.RemoveAll(filepath.Dir(p.Config.caCertPath))
 	if err != nil {
 		return err
 	}
 
 	// Client certificates
-	err = os.RemoveAll(path.Dir(p.Config.clientCertPath))
+	err = os.RemoveAll(filepath.Dir(p.Config.clientCertPath))
 	if err != nil {
 		return err
 	}
 
 	// Server certificates
-	err = os.RemoveAll(path.Dir(p.Config.serverKeyPath))
+	err = os.RemoveAll(filepath.Dir(p.Config.serverKeyPath))
 	if err != nil {
 		return err
 	}
@@ -97,8 +105,6 @@ func (p *PKI) GenerateCert(hosts []string) (err error) {
 func (p *PKI) CheckSetup() error {
 	var err error
 
-	err = errors.New("Not yet implemented")
-
 	// Check directories
 	if _, err := os.Stat(p.Config.caCertPath); err == nil {
 		return nil
@@ -121,13 +127,17 @@ func (p *PKI) SetupPKI(caHost string) error {
 	if p.CheckSetup() == nil {
 		return nil
 	}
+	log.Printf("Setting up PKI...")
 
 	bits := 2048
 	if _, err := os.Stat(p.Config.caCertPath); err == nil {
 		return fmt.Errorf("CA already exists. Run --delete to remove the old CA.")
 	}
 
-	os.MkdirAll(path.Dir(p.Config.caCertPath), 0700)
+	//os.MkdirAll(path.Dir(p.Config.caCertPath), 0700)
+	log.Printf("Creating dir %s", p.Config.caCertPath)
+	log.Printf("Creating dir %s", filepath.Dir(p.Config.caCertPath))
+	os.MkdirAll(filepath.Dir(p.Config.caCertPath), 0700)
 	if err := GenerateCACertificate(p.Config.caCertPath, p.Config.caKeyPath, caHost, bits); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
@@ -143,7 +153,7 @@ func (p *PKI) SetupPKI(caHost string) error {
 	organisation := "localhost"
 	hosts := []string{"localhost"}
 
-	os.MkdirAll(path.Dir(p.Config.serverCertPath), 0700)
+	os.MkdirAll(filepath.Dir(p.Config.serverCertPath), 0700)
 	err := GenerateCert(hosts, p.Config.serverCertPath, p.Config.serverKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
 	if err == nil {
 		_, err = os.Stat(p.Config.serverCertPath)
@@ -216,6 +226,10 @@ func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 		ClientCAs:    certPool,
 		Rand:         rand.Reader,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}
+	if p.Config.Insecure {
+		fmt.Printf("Setting server auth to insecure")
+		config.ClientAuth = tls.NoClientCert
 	}
 
 	return config, err

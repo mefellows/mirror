@@ -29,10 +29,24 @@ bin/mirror sync --src /tmp/dat1 --dest s3://mybucket.s3.amazonaws.com/dat2
 On remote server, start the mirror daemon. By default, it will listen on port 8123:
 
 ```
-mirror daemon
+mirror daemon --insecure
 ```
 
-This will create a Certificate Authority (CA) in `~/.mirror.d/ca/`, and client certificates in `~/.mirror.d/certs`. We will need
+On the client, specify the hostname of the remote server:
+
+```
+mirror remote --hostname myhost.com --src /tmp/foo --dest /tmp/bar
+```
+
+### Remote FS sync with SSL enabled
+
+The use of SSL is recommended when transferring files between remote file systems, let's
+see how we go about this with mirror.
+
+To begin with, start the daemon with `mirror daemon`.
+
+This will create a Certificate Authority (CA) in `~/.mirror.d/ca/`, 
+and client certificates in `~/.mirror.d/certs`. We will need
 this to communicate securely across the network, let's extract them:
 
 ```
@@ -41,7 +55,7 @@ mirror pki --outputClientCert > client.crt
 mirror pki --outputClientKey > client.pem
 ```
 
-Download these files to your local system. From client, we import them back in:
+Download these files to your local system. From the client, we import them back in:
 
 ```
 mirror pki --importCA --certFile ca.crt
@@ -49,7 +63,7 @@ mirror pki --importClientCert --certFile client.crt
 mirror pki --importClientKey --keyFile client.pem
 ```
 
-We can now communicate securely with the remote host:
+We can now communicate securely with the remote host over a trusted connection:
 
 ```
 bin/mirror sync --host myserver.com --src /tmp/dat1 --dest /var/backups/dat1

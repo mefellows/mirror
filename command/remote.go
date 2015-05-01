@@ -53,13 +53,22 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 
 	// Connect to RPC server
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), config)
-	if err != nil {
-		log.Fatalf("client: dial: %s", err)
+	var client *rpc.Client
+	if c.Insecure {
+		log.Printf("Running on non-secure protocol")
+		client, err = rpc.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port))
+		if err != nil {
+			log.Fatalf("client: dial: %s", err)
+		}
+	} else {
+		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), config)
+		defer conn.Close()
+		if err != nil {
+			log.Fatalf("client: dial: %s", err)
+		}
+		log.Println("client: connected to: ", conn.RemoteAddr())
+		client = rpc.NewClient(conn)
 	}
-	defer conn.Close()
-	log.Println("client: connected to: ", conn.RemoteAddr())
-	client := rpc.NewClient(conn)
 
 	// Perform remote operation
 	fromFile := fs.StdFile{StdName: c.Src}
