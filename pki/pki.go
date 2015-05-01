@@ -1,3 +1,7 @@
+// General notes on this package:
+//   1. Needs all non-PKI specific stuff removed
+//   2. Needs command related logging removed
+//   3. Ideally this package can be extracted from this project and made more generic
 package pki
 
 import (
@@ -106,7 +110,7 @@ func (p *PKI) CheckSetup() error {
 	var err error
 
 	// Check directories
-	if _, err := os.Stat(p.Config.caCertPath); err == nil {
+	if _, err = os.Stat(p.Config.caCertPath); err == nil {
 		return nil
 	}
 
@@ -134,9 +138,6 @@ func (p *PKI) SetupPKI(caHost string) error {
 		return fmt.Errorf("CA already exists. Run --delete to remove the old CA.")
 	}
 
-	//os.MkdirAll(path.Dir(p.Config.caCertPath), 0700)
-	log.Printf("Creating dir %s", p.Config.caCertPath)
-	log.Printf("Creating dir %s", filepath.Dir(p.Config.caCertPath))
 	os.MkdirAll(filepath.Dir(p.Config.caCertPath), 0700)
 	if err := GenerateCACertificate(p.Config.caCertPath, p.Config.caKeyPath, caHost, bits); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
