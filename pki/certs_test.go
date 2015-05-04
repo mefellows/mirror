@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestGenerateCACertificate(t *testing.T) {
+func xTestGenerateCACertificate(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "machine-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestGenerateCACertificate(t *testing.T) {
 	os.Setenv("MACHINE_DIR", "")
 }
 
-func TestGenerateCert(t *testing.T) {
+func xTestGenerateCert(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "machine-test-")
 	if err != nil {
 		t.Fatal(err)

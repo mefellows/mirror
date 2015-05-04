@@ -5,12 +5,14 @@
 package pki
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -159,17 +161,60 @@ func TestDiscoverCAs(t *testing.T) {
 	}
 	os.RemoveAll(tmpDir)
 
+	// TODO: Manually add extra CAs and check they are imported
+
+	// TODO: Check that certificates created against them are valid?
+
 }
 
-func TestSetupPKI(t *testing.T) {
+func TestOutputKeysAndThings(t *testing.T) {
+	pki := defaultPki()
+	output, _ := pki.OutputCAKey()
+	if !strings.Contains(output, "-----BEGIN RSA PRIVATE KEY-----") {
+		t.Fatalf("Expected to see \"-----BEGIN RSA PRIVATE KEY-----\", but got \"%s\"", output)
+	}
 
-}
+	output, _ = pki.OutputCACert()
+	if !strings.Contains(output, "-----BEGIN CERTIFICATE-----") {
+		t.Fatalf("Expected to see \"-----BEGIN CERTIFICATE-----\", but got \"%s\"", output)
 
-func TestRemovePKI(t *testing.T) {
+	}
 
+	output, _ = pki.OutputClientKey()
+	if !strings.Contains(output, "-----BEGIN RSA PRIVATE KEY-----") {
+		t.Fatalf("Expected to see \"-----BEGIN RSA PRIVATE KEY-----\", but got \"%s\"", output)
+	}
+
+	output, _ = pki.OutputClientCert()
+	if !strings.Contains(output, "-----BEGIN CERTIFICATE-----") {
+		t.Fatalf("Expected to see \"-----BEGIN CERTIFICATE-----\", but got \"%s\"", output)
+
+	}
+	os.RemoveAll(tmpDir)
 }
 
 func TestGetServerTLSConfig(t *testing.T) {
+	pki := defaultPki()
+	config, _ := pki.GetServerTLSConfig()
+	if config.ClientAuth != tls.RequireAndVerifyClientCert {
+		t.Fatalf("Communications should be secure by default, got: %s", config.ClientAuth)
+	}
+
+	os.Setenv("MIRROR_HOME", tmpDir)
+	pkiConfig := &Config{
+		Insecure:       true,
+		caCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
+		caKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
+		clientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
+		clientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
+		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
+		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
+	}
+	pki, _ = NewWithConfig(pkiConfig)
+	config, _ = pki.GetServerTLSConfig()
+	if config.ClientAuth != tls.NoClientCert {
+		t.Fatalf("Secure communications disabled, got: %s", config.ClientAuth)
+	}
 	// SSL
 	// Insecure
 	// Invalid SSL
@@ -177,6 +222,28 @@ func TestGetServerTLSConfig(t *testing.T) {
 }
 
 func TestGetClientTLSConfig(t *testing.T) {
+	pki := defaultPki()
+	config, _ := pki.GetClientTLSConfig()
+	if config.InsecureSkipVerify != false {
+		t.Fatalf("Communications should be secure by default, got: %s", config.ClientAuth)
+	}
+
+	os.Setenv("MIRROR_HOME", tmpDir)
+	pkiConfig := &Config{
+		Insecure:       true,
+		caCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
+		caKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
+		clientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
+		clientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
+		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
+		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
+	}
+	pki, _ = NewWithConfig(pkiConfig)
+	config, _ = pki.GetClientTLSConfig()
+	if config.InsecureSkipVerify == false {
+		t.Fatalf("Secure communications disabled, got: %s", config.InsecureSkipVerify)
+	}
+
 	// SSL
 	// Insecure
 	// Invalid SSL

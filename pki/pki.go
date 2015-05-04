@@ -195,8 +195,9 @@ func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 	}
 
 	config := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      certPool,
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            certPool,
+		InsecureSkipVerify: p.Config.Insecure,
 	}
 
 	return config, err
