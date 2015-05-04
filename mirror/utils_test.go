@@ -1,8 +1,10 @@
 package mirror
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -87,5 +89,35 @@ func TestRetryable(t *testing.T) {
 	err = Retryable(retryMe, timeout)
 	if err == nil {
 		t.Fatalf("should have error retrying funuction")
+	}
+}
+
+func TestOutputFileContents(t *testing.T) {
+	d1 := []byte("hello\ngo\n")
+	path := fmt.Sprintf("%s%s-%d", os.TempDir(), "testoutputfilecontents-", time.Now().UnixNano())
+	ioutil.WriteFile(path, d1, 0644)
+
+	output, err := OutputFileContents(path)
+	if bytes.Compare([]byte(output), d1) != 0 {
+		t.Fatalf("File read should read the same set of bytes back. Expected %s, got %s", d1, output)
+	}
+	if err != nil {
+		t.Fatalf("Did not expect error: %s", err)
+	}
+
+	// Failure test
+	path = fmt.Sprintf("/aoeuntahoeustaoeuatoeu.foobar")
+	output, err = OutputFileContents(path)
+	if err == nil {
+		t.Fatalf("Expected error but didn't get one")
+	}
+}
+
+func TestGetCADir(t *testing.T) {
+	dir := GetCADir()
+	expected := fmt.Sprintf("%s/ca", GetMirrorDir())
+	if dir != expected {
+		t.Fatalf("Expected CA Dir to be %s, but got %s", expected, dir)
+
 	}
 }

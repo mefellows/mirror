@@ -2,6 +2,7 @@ package mirror
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -76,4 +77,12 @@ func Retryable(f func() error, timeout time.Duration) error {
 			time.Sleep(retryableSleep)
 		}
 	}
+}
+func OutputFileContents(file string) (string, error) {
+	f, err := ioutil.ReadFile(file)
+	if err == nil {
+		return string(f), nil
+	}
+	return "", err
+
 }

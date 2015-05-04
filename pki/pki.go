@@ -167,27 +167,19 @@ func (p *PKI) SetupPKI(caHost string) error {
 	return nil
 }
 
-func outputFileContents(file string) string {
-	f, err := ioutil.ReadFile(file)
-	if err == nil {
-		return string(f)
-	}
-	return ""
-
-}
-func (p *PKI) OutputClientKey() string {
-	return outputFileContents(p.Config.clientKeyPath)
+func (p *PKI) OutputClientKey() (string, error) {
+	return mirror.OutputFileContents(p.Config.clientKeyPath)
 }
 
-func (p *PKI) OutputClientCert() string {
-	return outputFileContents(p.Config.clientCertPath)
+func (p *PKI) OutputClientCert() (string, error) {
+	return mirror.OutputFileContents(p.Config.clientCertPath)
 }
 
-func (p *PKI) OutputCAKey() string {
-	return outputFileContents(p.Config.caKeyPath)
+func (p *PKI) OutputCAKey() (string, error) {
+	return mirror.OutputFileContents(p.Config.caKeyPath)
 }
-func (p *PKI) OutputCACert() string {
-	return outputFileContents(p.Config.caCertPath)
+func (p *PKI) OutputCACert() (string, error) {
+	return mirror.OutputFileContents(p.Config.caCertPath)
 }
 
 func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
