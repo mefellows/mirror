@@ -59,11 +59,11 @@ func GenerateCACertificate(certFile, keyFile, org string, bits int) error {
 	return nil
 }
 
-// GenerateCert generates a new certificate signed using the provided
+// GenerateCertificate generates a new certificate signed using the provided
 // certificate authority files and stores the result in the certificate
 // file and key provided.  The provided host names are set to the
 // appropriate certificate fields.
-func GenerateCert(hosts []string, certFile, keyFile, caFile, caKeyFile, org string, bits int) error {
+func GenerateCertificate(hosts []string, certFile, keyFile, caFile, caKeyFile, org string, bits int) error {
 	template, err := newCertificate(org)
 	if err != nil {
 		return err

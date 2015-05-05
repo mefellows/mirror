@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func xTestGenerateCACertificate(t *testing.T) {
+func TestGenerateCACertificate(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "machine-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func xTestGenerateCACertificate(t *testing.T) {
 	os.Setenv("MACHINE_DIR", "")
 }
 
-func xTestGenerateCert(t *testing.T) {
+func TestGenerateCertificate(t *testing.T) {
 	tmpDir, err := ioutil.TempDir("", "machine-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func xTestGenerateCert(t *testing.T) {
 	os.Setenv("MACHINE_DIR", "")
 
 	// Client Cert
-	if err := GenerateCert([]string{""}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+	if err := GenerateCertificate([]string{""}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,7 +75,7 @@ func xTestGenerateCert(t *testing.T) {
 	}
 
 	// Hostname Cert
-	if err := GenerateCert([]string{"foo.com"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+	if err := GenerateCertificate([]string{"foo.com"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
 		t.Fatal(err)
 	}
 
@@ -88,7 +88,7 @@ func xTestGenerateCert(t *testing.T) {
 	}
 
 	// IP based cert
-	if err := GenerateCert([]string{"127.0.0.1"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+	if err := GenerateCertificate([]string{"127.0.0.1"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
 		t.Fatal(err)
 	}
 

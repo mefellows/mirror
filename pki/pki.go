@@ -90,14 +90,14 @@ func (p *PKI) RemovePKI() error {
 	return err
 }
 
-func (p *PKI) GenerateCert(hosts []string) (err error) {
+func (p *PKI) GenerateClientCertificate(hosts []string) (err error) {
 	organisation := "client"
 	bits := 2048
 
 	if len(hosts) == 0 {
 		hosts = []string{}
 	}
-	err = GenerateCert(hosts, p.Config.clientCertPath, p.Config.clientKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
+	err = GenerateCertificate(hosts, p.Config.clientCertPath, p.Config.clientKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
 	if err == nil {
 		_, err = os.Stat(p.Config.clientCertPath)
 		_, err = os.Stat(p.Config.clientKeyPath)
@@ -155,14 +155,14 @@ func (p *PKI) SetupPKI(caHost string) error {
 	hosts := []string{"localhost"}
 
 	os.MkdirAll(filepath.Dir(p.Config.serverCertPath), 0700)
-	err := GenerateCert(hosts, p.Config.serverCertPath, p.Config.serverKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
+	err := GenerateCertificate(hosts, p.Config.serverCertPath, p.Config.serverKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
 	if err == nil {
 		_, err = os.Stat(p.Config.serverCertPath)
 		_, err = os.Stat(p.Config.serverKeyPath)
 	}
 
 	// Setup Client side...
-	p.GenerateCert([]string{"localhost"})
+	p.GenerateClientCertificate([]string{"localhost"})
 
 	return nil
 }

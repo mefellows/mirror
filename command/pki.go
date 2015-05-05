@@ -84,8 +84,7 @@ func (c *PkiCommand) Run(args []string) int {
 
 	if c.generateCert {
 		c.Meta.Ui.Output("Generating a client cert")
-		//err := pki.GenerateCert()
-		err := pki.GenerateCert([]string{"localhost"})
+		err := pki.GenerateClientCertificate([]string{"localhost"})
 		if err != nil {
 			c.Meta.Ui.Error(err.Error())
 		}
