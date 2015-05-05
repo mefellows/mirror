@@ -50,17 +50,17 @@ func (c *PkiCommand) Run(args []string) int {
 	}
 
 	if c.outputCA {
-		cert := pki.OutputCACert()
+		cert, _ := pki.OutputCACert()
 		c.Meta.Ui.Output(cert)
 	}
 
 	if c.outputClientCert {
-		cert := pki.OutputClientCert()
+		cert, _ := pki.OutputClientCert()
 		c.Meta.Ui.Output(cert)
 	}
 
 	if c.outputClientKey {
-		cert := pki.OutputClientKey()
+		cert, _ := pki.OutputClientKey()
 		c.Meta.Ui.Output(cert)
 	}
 
