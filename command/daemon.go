@@ -32,7 +32,7 @@ func (c *DaemonCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Meta.Ui.Output(fmt.Sprintf("Would run on port %d", c.Port))
+	c.Meta.Ui.Output(fmt.Sprintf("Running mirror daemon on port %d", c.Port))
 	remoteFs := new(remote.RemoteFileSystem)
 	rpc.Register(remoteFs)
 
@@ -49,22 +49,13 @@ func (c *DaemonCommand) Run(args []string) int {
 	}
 
 	var listener net.Listener
-	if c.Insecure {
-		log.Printf("Daemon running on non-secure protocol")
-		rpc.HandleHTTP()
-		listener, err = net.Listen("tcp", service)
-		if err != nil {
-			log.Fatal("listen error:", err)
-		}
-	} else {
-		config, err := pkiMgr.GetServerTLSConfig()
-		if err != nil {
-			log.Fatalf("server: listen: %s", err)
-		}
-		listener, err = tls.Listen("tcp", service, config)
-		if err != nil {
-			log.Fatalf("server: listen: %s", err)
-		}
+	config, err := pkiMgr.GetServerTLSConfig()
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
+	}
+	listener, err = tls.Listen("tcp", service, config)
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
 	}
 	for {
 		conn, err := listener.Accept()

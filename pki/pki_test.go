@@ -213,12 +213,25 @@ func TestGetServerTLSConfig(t *testing.T) {
 	pki, _ = NewWithConfig(pkiConfig)
 	config, _ = pki.GetServerTLSConfig()
 	if config.ClientAuth != tls.NoClientCert {
-		t.Fatalf("Secure communications disabled, got: %s", config.ClientAuth)
+		t.Fatalf("Secure communications disabled, should not check client cert (tls.NoClientCert) but instead got: %s", config.ClientAuth)
 	}
-	// SSL
-	// Insecure
-	// Invalid SSL
-	// Invalid Client Cert
+
+	// Delete the CA - This should actually be an error as we need a non-nil certPool
+	os.Remove(path.Join(tmpDir, "ca", "ca.pem"))
+	os.Remove(path.Join(tmpDir, "ca", "key.pem"))
+	config, err := pki.GetServerTLSConfig()
+	if err == nil {
+		t.Fatalf("no CA, even in --insecure mode this should cause an issue due to TLS library requirements for a CertPool. Happy days if not.")
+	}
+
+	// Delete the CA - we should get an error
+	pkiConfig.Insecure = false
+	os.Remove(path.Join(tmpDir, "ca", "ca.pem"))
+	os.Remove(path.Join(tmpDir, "ca", "key.pem"))
+	config, err = pki.GetServerTLSConfig()
+	if err == nil {
+		t.Fatalf("No CA present, should be an error")
+	}
 }
 
 func TestGetClientTLSConfig(t *testing.T) {
@@ -238,14 +251,34 @@ func TestGetClientTLSConfig(t *testing.T) {
 		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
 		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
 	}
+
+	// Insecure
 	pki, _ = NewWithConfig(pkiConfig)
 	config, _ = pki.GetClientTLSConfig()
 	if config.InsecureSkipVerify == false {
 		t.Fatalf("Secure communications disabled, got: %s", config.InsecureSkipVerify)
 	}
 
-	// SSL
-	// Insecure
-	// Invalid SSL
-	// Invalid Client Cert
+	// Insecure - no client certs also. Should not error
+	os.Remove(path.Join(tmpDir, "certs", "cert.pem"))
+	os.Remove(path.Join(tmpDir, "certs", "cert-key.pem"))
+	pki, _ = NewWithConfig(pkiConfig)
+	config, err := pki.GetClientTLSConfig()
+	if err != nil {
+		t.Fatalf("Did not expect err: %s", err)
+	}
+	if config.InsecureSkipVerify == false {
+		t.Fatalf("Secure communications disabled, got: %s", config.InsecureSkipVerify)
+	}
+
+	pkiConfig.Insecure = false
+	pki, _ = NewWithConfig(pkiConfig)
+	config, err = pki.GetClientTLSConfig()
+	if err == nil {
+		t.Fatalf("Expected error but did not get one")
+	}
+}
+
+func TestGenerateClientCertificate(t *testing.T) {
+
 }
