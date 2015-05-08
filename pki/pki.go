@@ -8,13 +8,19 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
+
+var CertificatePreamble = "-----BEGIN CERTIFICATE-----"
+var KeyPreamble = "-----BEGIN RSA PRIVATE KEY-----"
 
 // General Mirror Pubic Key Infrastructure functions
 
@@ -23,12 +29,12 @@ type PKI struct {
 }
 
 type Config struct {
-	clientKeyPath  string
-	clientCertPath string
-	serverKeyPath  string
-	serverCertPath string
-	caKeyPath      string
-	caCertPath     string
+	ClientKeyPath  string
+	ClientCertPath string
+	ServerKeyPath  string
+	ServerCertPath string
+	CaKeyPath      string
+	CaCertPath     string
 	Insecure       bool
 }
 
@@ -59,30 +65,30 @@ func getDefaultConfig() *Config {
 	serverKeyPath := filepath.Join(certDir, "server-key.pem")
 
 	return &Config{
-		clientKeyPath:  keyPath,
-		clientCertPath: certPath,
-		caCertPath:     caCertPath,
-		caKeyPath:      caKeyPath,
-		serverCertPath: serverCertPath,
-		serverKeyPath:  serverKeyPath,
+		ClientKeyPath:  keyPath,
+		ClientCertPath: certPath,
+		CaCertPath:     caCertPath,
+		CaKeyPath:      caKeyPath,
+		ServerCertPath: serverCertPath,
+		ServerKeyPath:  serverKeyPath,
 	}
 }
 
 func (p *PKI) RemovePKI() error {
 	// Root CA + Certificates
-	err := os.RemoveAll(filepath.Dir(p.Config.caCertPath))
+	err := os.RemoveAll(filepath.Dir(p.Config.CaCertPath))
 	if err != nil {
 		return err
 	}
 
 	// Client certificates
-	err = os.RemoveAll(filepath.Dir(p.Config.clientCertPath))
+	err = os.RemoveAll(filepath.Dir(p.Config.ClientCertPath))
 	if err != nil {
 		return err
 	}
 
 	// Server certificates
-	err = os.RemoveAll(filepath.Dir(p.Config.serverKeyPath))
+	err = os.RemoveAll(filepath.Dir(p.Config.ServerKeyPath))
 	if err != nil {
 		return err
 	}
@@ -97,10 +103,10 @@ func (p *PKI) GenerateClientCertificate(hosts []string) (err error) {
 	if len(hosts) == 0 {
 		hosts = []string{}
 	}
-	err = GenerateCertificate(hosts, p.Config.clientCertPath, p.Config.clientKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
+	err = GenerateCertificate(hosts, p.Config.ClientCertPath, p.Config.ClientKeyPath, p.Config.CaCertPath, p.Config.CaKeyPath, organisation, bits)
 	if err == nil {
-		_, err = os.Stat(p.Config.clientCertPath)
-		_, err = os.Stat(p.Config.clientKeyPath)
+		_, err = os.Stat(p.Config.ClientCertPath)
+		_, err = os.Stat(p.Config.ClientKeyPath)
 	}
 	return
 }
@@ -110,7 +116,7 @@ func (p *PKI) CheckSetup() error {
 	var err error
 
 	// Check directories
-	if _, err = os.Stat(p.Config.caCertPath); err == nil {
+	if _, err = os.Stat(p.Config.CaCertPath); err == nil {
 		return nil
 	}
 
@@ -134,31 +140,31 @@ func (p *PKI) SetupPKI(caHost string) error {
 	log.Printf("Setting up PKI...")
 
 	bits := 2048
-	if _, err := os.Stat(p.Config.caCertPath); err == nil {
+	if _, err := os.Stat(p.Config.CaCertPath); err == nil {
 		return fmt.Errorf("CA already exists. Run --delete to remove the old CA.")
 	}
 
-	os.MkdirAll(filepath.Dir(p.Config.caCertPath), 0700)
-	if err := GenerateCACertificate(p.Config.caCertPath, p.Config.caKeyPath, caHost, bits); err != nil {
+	os.MkdirAll(filepath.Dir(p.Config.CaCertPath), 0700)
+	if err := GenerateCACertificate(p.Config.CaCertPath, p.Config.CaKeyPath, caHost, bits); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	if _, err := os.Stat(p.Config.caCertPath); err != nil {
+	if _, err := os.Stat(p.Config.CaCertPath); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	if _, err := os.Stat(p.Config.caKeyPath); err != nil {
+	if _, err := os.Stat(p.Config.CaKeyPath); err != nil {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
 	organisation := "localhost"
 	hosts := []string{"localhost"}
 
-	os.MkdirAll(filepath.Dir(p.Config.serverCertPath), 0700)
-	err := GenerateCertificate(hosts, p.Config.serverCertPath, p.Config.serverKeyPath, p.Config.caCertPath, p.Config.caKeyPath, organisation, bits)
+	os.MkdirAll(filepath.Dir(p.Config.ServerCertPath), 0700)
+	err := GenerateCertificate(hosts, p.Config.ServerCertPath, p.Config.ServerKeyPath, p.Config.CaCertPath, p.Config.CaKeyPath, organisation, bits)
 	if err == nil {
-		_, err = os.Stat(p.Config.serverCertPath)
-		_, err = os.Stat(p.Config.serverKeyPath)
+		_, err = os.Stat(p.Config.ServerCertPath)
+		_, err = os.Stat(p.Config.ServerKeyPath)
 	}
 
 	// Setup Client side...
@@ -168,25 +174,25 @@ func (p *PKI) SetupPKI(caHost string) error {
 }
 
 func (p *PKI) OutputClientKey() (string, error) {
-	return mirror.OutputFileContents(p.Config.clientKeyPath)
+	return mirror.OutputFileContents(p.Config.ClientKeyPath)
 }
 
 func (p *PKI) OutputClientCert() (string, error) {
-	return mirror.OutputFileContents(p.Config.clientCertPath)
+	return mirror.OutputFileContents(p.Config.ClientCertPath)
 }
 
 func (p *PKI) OutputCAKey() (string, error) {
-	return mirror.OutputFileContents(p.Config.caKeyPath)
+	return mirror.OutputFileContents(p.Config.CaKeyPath)
 }
 func (p *PKI) OutputCACert() (string, error) {
-	return mirror.OutputFileContents(p.Config.caCertPath)
+	return mirror.OutputFileContents(p.Config.CaCertPath)
 }
 
 func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 
 	var certificates []tls.Certificate
 	if !p.Config.Insecure {
-		cert, err := tls.LoadX509KeyPair(p.Config.clientCertPath, p.Config.clientKeyPath)
+		cert, err := tls.LoadX509KeyPair(p.Config.ClientCertPath, p.Config.ClientKeyPath)
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +215,7 @@ func (p *PKI) GetClientTLSConfig() (*tls.Config, error) {
 
 func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 
-	cert, err := tls.LoadX509KeyPair(p.Config.serverCertPath, p.Config.serverKeyPath)
+	cert, err := tls.LoadX509KeyPair(p.Config.ServerCertPath, p.Config.ServerKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -233,22 +239,67 @@ func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 	return config, err
 }
 
+func (p *PKI) ImportCA(name string, certPath string) error {
+	// Validate name - only alphanumeric
+	var nameMatch = regexp.MustCompile(`^[a-zA-Z-_\.0-9]+$`)
+	if !nameMatch.MatchString(name) {
+		return errors.New("CA Name must contain only alphanumeric characters")
+	}
+
+	dstCert := filepath.Join(mirror.GetCADir(), fmt.Sprintf("%s-ca.pem", name))
+	cert, err := ioutil.ReadFile(certPath)
+
+	if err != nil {
+		return err
+	}
+
+	// import Cert
+	fmt.Printf("cert: %s", cert)
+	if strings.Contains(string(cert), CertificatePreamble) {
+		ioutil.WriteFile(dstCert, cert, 0600)
+	} else {
+		return errors.New(fmt.Sprintf("Certificate provided is not valid, no %s present", CertificatePreamble))
+	}
+
+	return nil
+}
+
 func (p *PKI) discoverCAs() (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 
-	// Default Root CA
-	caPaths := []string{p.Config.caCertPath}
+	var caPaths []string
 	var err error
+
+	// Read in all certs from CA dir
+	readFiles, err := ioutil.ReadDir(filepath.Dir(p.Config.CaCertPath))
+	if err == nil {
+		caPaths = make([]string, 0)
+
+		for _, file := range readFiles {
+			if strings.HasSuffix(file.Name(), ".pem") || strings.HasSuffix(file.Name(), ".crt") {
+				caPaths = append(caPaths, filepath.Join(filepath.Dir(p.Config.CaCertPath), file.Name()))
+			}
+		}
+	}
 
 	for _, cert := range caPaths {
 		pemData, err := ioutil.ReadFile(cert)
 		if err != nil {
 			return nil, err
 		}
-		if ok := certPool.AppendCertsFromPEM(pemData); !ok {
-			return nil, err
+
+		// Only add certs
+		if strings.Contains(string(pemData), CertificatePreamble) {
+			if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+				return nil, err
+			}
 		}
 	}
 
 	return certPool, err
+}
+
+func (p *PKI) discoverClientCerts() ([]tls.Certificate, error) {
+	var certificates []tls.Certificate
+	return certificates, nil
 }

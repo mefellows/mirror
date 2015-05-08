@@ -19,7 +19,7 @@ type RemoteCommand struct {
 	Host     string
 	Port     int
 	Cert     string
-	CertKey  string
+	Key      string
 	Insecure bool
 	Exclude  excludes
 }
@@ -32,6 +32,7 @@ func (c *RemoteCommand) Run(args []string) int {
 	cmdFlags.StringVar(&c.Dest, "dest", "", "The destination location to copy the contents of 'src' to.")
 	cmdFlags.StringVar(&c.Host, "host", "localhost", "The destination host")
 	cmdFlags.StringVar(&c.Cert, "cert", "", "The location of a client certificate to use")
+	cmdFlags.StringVar(&c.Key, "key", "", "The location of a client key to use")
 	cmdFlags.IntVar(&c.Port, "port", 8123, "The destination host")
 	cmdFlags.BoolVar(&c.Insecure, "insecure", false, "Run operation over an insecure connection")
 	cmdFlags.Var(&c.Exclude, "exclude", "Set of exclusions as POSIX regular expressions to exclude from the transfer")
@@ -43,6 +44,14 @@ func (c *RemoteCommand) Run(args []string) int {
 
 	pkiMgr, err := pki.New()
 	pkiMgr.Config.Insecure = c.Insecure
+
+	if c.Cert != "" {
+		pkiMgr.Config.ClientCertPath = c.Cert
+	}
+	if c.Key != "" {
+		pkiMgr.Config.ClientKeyPath = c.Key
+	}
+
 	if err != nil {
 		c.Meta.Ui.Error(fmt.Sprintf("Unable to setup public key infrastructure: %s", err.Error()))
 		return 1
@@ -94,11 +103,13 @@ Usage: mirror remote [options]
   
 Options:
 
-  -src                       The source directory from which to copy from
-  -dest                      The destination directory from which to copy to
-  -host                      The remote host to sync the files/folders with. Defaults to 'localhost'
-  -port                      The port on the remote host to connect to. Defaults to 8123
-  -insecure					 The file transfer should be performed over an unencrypted connection
+  --src                       The source directory from which to copy from
+  --dest                      The destination directory from which to copy to
+  --host                      The remote host to sync the files/folders with. Defaults to 'localhost'
+  --port                      The port on the remote host to connect to. Defaults to 8123
+  --insecure          		  The file transfer should be performed over an unencrypted connection
+  --cert                      The certificate (.pem) to use in secure requests
+  --key                       The key (.pem) to use in secure requests
 `
 
 	return strings.TrimSpace(helpText)

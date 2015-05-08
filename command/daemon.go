@@ -85,8 +85,8 @@ Usage: mirror daemon [options]
   
 Options:
 
-  -port                       The http(s) port to listen on
-  -insecure					  Disable SSL security on the connection
+  --port                      The http(s) port to listen on
+  --insecure				  Disable SSL security on the connection
 `
 
 	return strings.TrimSpace(helpText)

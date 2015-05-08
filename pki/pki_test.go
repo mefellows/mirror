@@ -42,7 +42,7 @@ func TestNew(t *testing.T) {
 		t.Fatalf("Expected PKI to return non-nil object")
 	}
 
-	paths := []string{pki.Config.caCertPath, pki.Config.caKeyPath, pki.Config.clientCertPath, pki.Config.clientKeyPath, pki.Config.serverKeyPath, pki.Config.serverCertPath}
+	paths := []string{pki.Config.CaCertPath, pki.Config.CaKeyPath, pki.Config.ClientCertPath, pki.Config.ClientKeyPath, pki.Config.ServerKeyPath, pki.Config.ServerCertPath}
 	for _, file := range paths {
 		if _, err := os.Stat(file); err != nil {
 			fmt.Printf("file %s not found, take a look...")
@@ -58,12 +58,12 @@ func TestNewWithConfig(t *testing.T) {
 	os.Setenv("MIRROR_HOME", tmpDir)
 	config := &Config{
 		Insecure:       true,
-		caCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
-		caKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
-		clientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
-		clientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
-		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
-		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
+		CaCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
+		CaKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
+		ClientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
+		ClientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
+		ServerCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
+		ServerKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
 	}
 	pki, err := NewWithConfig(config)
 
@@ -74,7 +74,7 @@ func TestNewWithConfig(t *testing.T) {
 		t.Fatalf("Expected PKI to return non-nil object")
 	}
 
-	paths := []string{config.caCertPath, config.caKeyPath, config.clientCertPath, config.clientKeyPath, config.serverKeyPath, config.serverCertPath}
+	paths := []string{config.CaCertPath, config.CaKeyPath, config.ClientCertPath, config.ClientKeyPath, config.ServerKeyPath, config.ServerCertPath}
 	for _, file := range paths {
 		if _, err := os.Stat(file); err != nil {
 			t.Fatalf("File '%s' did not exist", file)
@@ -101,7 +101,7 @@ func TestRemoveAll(t *testing.T) {
 
 	err = pki.RemovePKI()
 
-	paths := []string{pki.Config.caCertPath, pki.Config.caKeyPath, pki.Config.clientCertPath, pki.Config.clientKeyPath, pki.Config.serverKeyPath, pki.Config.serverCertPath}
+	paths := []string{pki.Config.CaCertPath, pki.Config.CaKeyPath, pki.Config.ClientCertPath, pki.Config.ClientKeyPath, pki.Config.ServerKeyPath, pki.Config.ServerCertPath}
 	for _, file := range paths {
 		if _, err := os.Stat(file); err == nil {
 			t.Fatalf("File '%s' still exists, but should have been removed", file)
@@ -115,18 +115,18 @@ func generateCaCert() error {
 	// Setup fake cert
 	os.Mkdir(mirror.GetCADir(), 755)
 	os.Mkdir(mirror.GetCertDir(), 755)
-	caCertPath := filepath.Join(mirror.GetCADir(), "ca.pem")
-	caKeyPath := filepath.Join(mirror.GetCertDir(), "key.pem")
+	CaCertPath := filepath.Join(mirror.GetCADir(), "ca.pem")
+	CaKeyPath := filepath.Join(mirror.GetCertDir(), "key.pem")
 	testOrg := "test-org"
 	bits := 2048
-	if err := GenerateCACertificate(caCertPath, caKeyPath, testOrg, bits); err != nil {
+	if err := GenerateCACertificate(CaCertPath, CaKeyPath, testOrg, bits); err != nil {
 		return err
 	}
 
-	if _, err := os.Stat(caCertPath); err != nil {
+	if _, err := os.Stat(CaCertPath); err != nil {
 		return err
 	}
-	if _, err := os.Stat(caKeyPath); err != nil {
+	if _, err := os.Stat(CaKeyPath); err != nil {
 		return err
 	}
 	return nil
@@ -136,19 +136,18 @@ func TestDefaultConfig(t *testing.T) {
 	pki := defaultPki()
 
 	expectedCaCertPath := path.Join(tmpDir, "/ca/ca.pem")
-	if pki.Config.caCertPath != expectedCaCertPath {
-		t.Fatalf("Expected CA Cert path to be %s, but got %s", expectedCaCertPath, pki.Config.caCertPath)
+	if pki.Config.CaCertPath != expectedCaCertPath {
+		t.Fatalf("Expected CA Cert path to be %s, but got %s", expectedCaCertPath, pki.Config.CaCertPath)
 	}
 
 	expectedCaKeyPath := path.Join(tmpDir, "/ca/key.pem")
-	if pki.Config.caKeyPath != expectedCaKeyPath {
-		t.Fatalf("Expected CA Key path to be %s, but got %s", expectedCaKeyPath, pki.Config.caKeyPath)
+	if pki.Config.CaKeyPath != expectedCaKeyPath {
+		t.Fatalf("Expected CA Key path to be %s, but got %s", expectedCaKeyPath, pki.Config.CaKeyPath)
 	}
 	os.RemoveAll(tmpDir)
 }
 
 func TestDiscoverCAs(t *testing.T) {
-	// cleanup
 	generateCaCert()
 
 	pki := defaultPki()
@@ -159,11 +158,30 @@ func TestDiscoverCAs(t *testing.T) {
 	if len(pool.Subjects()) == 0 {
 		t.Fatalf("Empty cert pool!")
 	}
-	os.RemoveAll(tmpDir)
+	if len(pool.Subjects()) != 1 {
+		t.Fatalf("More subjects than the (1) expected, got %d", len(pool.Subjects()))
+	}
 
-	// TODO: Manually add extra CAs and check they are imported
+	// Manually add extra CAs and check they are imported
+	cert, _ := ioutil.ReadFile(pki.Config.CaCertPath)
+	key, _ := ioutil.ReadFile(pki.Config.CaKeyPath)
+	ioutil.WriteFile(filepath.Join(filepath.Dir(pki.Config.CaCertPath), "ca-test.pem"), cert, 0600)
+	ioutil.WriteFile(filepath.Join(filepath.Dir(pki.Config.CaCertPath), "key-test.pem"), key, 0600)
+	generateCaCert()
+
+	pool, err = pki.discoverCAs()
+	if err != nil {
+		t.Fatalf("Error: %s", err.Error())
+	}
+	if len(pool.Subjects()) == 0 {
+		t.Fatalf("Empty cert pool!")
+	}
+	if len(pool.Subjects()) != 2 {
+		t.Fatalf("More subjects than the (2) expected, got %d", len(pool.Subjects()))
+	}
 
 	// TODO: Check that certificates created against them are valid?
+	os.RemoveAll(tmpDir)
 
 }
 
@@ -203,12 +221,12 @@ func TestGetServerTLSConfig(t *testing.T) {
 	os.Setenv("MIRROR_HOME", tmpDir)
 	pkiConfig := &Config{
 		Insecure:       true,
-		caCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
-		caKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
-		clientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
-		clientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
-		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
-		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
+		CaCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
+		CaKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
+		ClientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
+		ClientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
+		ServerCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
+		ServerKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
 	}
 	pki, _ = NewWithConfig(pkiConfig)
 	config, _ = pki.GetServerTLSConfig()
@@ -217,17 +235,15 @@ func TestGetServerTLSConfig(t *testing.T) {
 	}
 
 	// Delete the CA - This should actually be an error as we need a non-nil certPool
-	os.Remove(path.Join(tmpDir, "ca", "ca.pem"))
-	os.Remove(path.Join(tmpDir, "ca", "key.pem"))
+	os.RemoveAll(tmpDir)
 	config, err := pki.GetServerTLSConfig()
+	fmt.Printf("tmp dir: %s", tmpDir)
 	if err == nil {
-		t.Fatalf("no CA, even in --insecure mode this should cause an issue due to TLS library requirements for a CertPool. Happy days if not.")
+		t.Fatalf("no CA/Server Certs, even in --insecure mode this should cause an issue due to TLS library requirements for a CertPool. Happy days if not.")
 	}
 
 	// Delete the CA - we should get an error
 	pkiConfig.Insecure = false
-	os.Remove(path.Join(tmpDir, "ca", "ca.pem"))
-	os.Remove(path.Join(tmpDir, "ca", "key.pem"))
 	config, err = pki.GetServerTLSConfig()
 	if err == nil {
 		t.Fatalf("No CA present, should be an error")
@@ -244,12 +260,12 @@ func TestGetClientTLSConfig(t *testing.T) {
 	os.Setenv("MIRROR_HOME", tmpDir)
 	pkiConfig := &Config{
 		Insecure:       true,
-		caCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
-		caKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
-		clientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
-		clientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
-		serverCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
-		serverKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
+		CaCertPath:     path.Join(tmpDir, "ca", "ca.pem"),
+		CaKeyPath:      path.Join(tmpDir, "ca", "key.pem"),
+		ClientCertPath: path.Join(tmpDir, "certs", "cert.pem"),
+		ClientKeyPath:  path.Join(tmpDir, "certs", "cert-key.pem"),
+		ServerCertPath: path.Join(tmpDir, "certs", "server-cert.pem"),
+		ServerKeyPath:  path.Join(tmpDir, "certs", "server-key.pem"),
 	}
 
 	// Insecure
@@ -280,5 +296,13 @@ func TestGetClientTLSConfig(t *testing.T) {
 }
 
 func TestGenerateClientCertificate(t *testing.T) {
+
+}
+
+func TestDiscoverClientCertificates(t *testing.T) {
+
+}
+
+func TestImportCA(t *testing.T) {
 
 }

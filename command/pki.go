@@ -3,9 +3,9 @@ package command
 import (
 	"flag"
 	"fmt"
-	//"github.com/mefellows/mirror/mirror"
 	"github.com/mefellows/mirror/pki"
 	"strings"
+	"time"
 )
 
 type PkiCommand struct {
@@ -47,6 +47,17 @@ func (c *PkiCommand) Run(args []string) int {
 	// Validate
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
+	}
+
+	if c.trustCA != "" {
+		c.Meta.Ui.Output(fmt.Sprintf("Importing CA from %s", c.trustCA))
+		timestamp := time.Now().Unix()
+		err := pki.ImportCA(fmt.Sprintf("%d", timestamp), c.trustCA)
+		if err != nil {
+			c.Meta.Ui.Error(fmt.Sprintf("Failed to import CA: %s", err.Error()))
+		} else {
+			c.Meta.Ui.Info("CA successfully imported")
+		}
 	}
 
 	if c.outputCA {
@@ -104,7 +115,7 @@ Usage: mirror pki [options]
 Options:
 
   --configure                 Setup PKI infrastructure on this Mirror node.
-  --trustCA                   Trust the provided CA (often used to trust other Mirror node CAs).
+  --trustCA                   Trust the provided CA (often used to trust other Mirror node CAs). Requires a CA Certificate.
   --outputCA                  Output the CA Certificate for this mirror node. 
   --inputClientCert           Output the current Client Certificate (.crt).
   --inputClientKey            Output the current Client Key (.pem) file.
