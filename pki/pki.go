@@ -254,7 +254,6 @@ func (p *PKI) ImportCA(name string, certPath string) error {
 	}
 
 	// import Cert
-	fmt.Printf("cert: %s", cert)
 	if strings.Contains(string(cert), CertificatePreamble) {
 		ioutil.WriteFile(dstCert, cert, 0600)
 	} else {

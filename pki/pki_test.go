@@ -305,4 +305,62 @@ func TestDiscoverClientCertificates(t *testing.T) {
 
 func TestImportCA(t *testing.T) {
 
+	// Happy scenario
+
+	pki := defaultPki()
+	pool, err := pki.discoverCAs()
+	crt, _ := ioutil.ReadFile(pki.Config.CaCertPath)
+	newPem := path.Join(tmpDir, "ca", "ca-import.pem")
+	ioutil.WriteFile(newPem, crt, 0600)
+
+	err = pki.ImportCA("mynewca", newPem)
+	if err != nil {
+		t.Fatalf("Did not expect error")
+	}
+	if len(pool.Subjects()) == 0 {
+		t.Fatal("CA import failed")
+	}
+
+	os.RemoveAll(tmpDir)
+
+	// Validate file doesn't exist
+	pki = defaultPki()
+	os.RemoveAll(tmpDir)
+	pool, err = pki.discoverCAs()
+	newPem = path.Join(tmpDir, "ca", "ca-import.pem")
+	ioutil.WriteFile(newPem, crt, 0600)
+
+	err = pki.ImportCA("mynewca", newPem)
+	if err == nil {
+		t.Fatalf("Expected error")
+	}
+	if len(pool.Subjects()) != 0 {
+		t.Fatal("CA import should have faild, removed all certs")
+	}
+
+	// Validate name regex
+	pki = defaultPki()
+	newPem = path.Join(tmpDir, "ca", "ca-import.pem")
+	ioutil.WriteFile(newPem, crt, 0600)
+	names := []string{"&invalid", "in valid", "In^alid"}
+	for _, name := range names {
+		err = pki.ImportCA(name, newPem)
+		if err == nil {
+			t.Fatalf("Expected error")
+		}
+	}
+	names = []string{"valid", "val1d", "val-1d-0123456789", "VAL1d", "val_id", "valid.fr33"}
+	for _, name := range names {
+		err = pki.ImportCA(name, newPem)
+		if err != nil {
+			t.Fatalf("Did not expect error: %s", err.Error())
+		}
+	}
+
+	// Validate invalid CA
+	ioutil.WriteFile(newPem, []byte{}, 0600)
+	err = pki.ImportCA("mynewca", newPem)
+	if err == nil && !strings.HasPrefix(err.Error(), "Certificate provided is not valid") {
+		t.Fatalf("Expected error to start with 'Certificate provided is not valid'")
+	}
 }
