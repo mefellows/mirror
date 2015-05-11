@@ -391,4 +391,11 @@ func TestImportClient(t *testing.T) {
 	if _, err := os.Stat(path.Join(tmpDir, "certs", "client-key.pem")); err != nil {
 		t.Fatalf("Did not expect error: %s", err)
 	}
+
+	// Validate invalid CA
+	ioutil.WriteFile(newCrt, []byte{}, 0600)
+	err = pki.ImportClientCertAndKey(newCrt, newKey)
+	if err == nil && !strings.HasPrefix(err.Error(), "Certificate provided is not valid") {
+		t.Fatalf("Expected error to start with 'Certificate provided is not valid'")
+	}
 }

@@ -108,7 +108,6 @@ func (c *PkiCommand) Run(args []string) int {
 			c.Meta.Ui.Error(err.Error())
 		}
 		c.Meta.Ui.Output("Cert generation complete")
-
 	}
 
 	return 0
