@@ -364,3 +364,31 @@ func TestImportCA(t *testing.T) {
 		t.Fatalf("Expected error to start with 'Certificate provided is not valid'")
 	}
 }
+func TestImportClient(t *testing.T) {
+
+	// Happy scenario
+
+	pki := defaultPki()
+	crt, _ := ioutil.ReadFile(pki.Config.ClientCertPath)
+	key, _ := ioutil.ReadFile(pki.Config.ClientKeyPath)
+	os.Remove(path.Join(tmpDir, "certs", "cert.pem"))
+	os.Remove(path.Join(tmpDir, "certs", "cert-key.pem"))
+
+	newCrt := path.Join(tmpDir, "certs", "client-cert.pem")
+	newKey := path.Join(tmpDir, "certs", "client-key.pem")
+	ioutil.WriteFile(newCrt, crt, 0600)
+	ioutil.WriteFile(newKey, key, 0600)
+
+	err := pki.ImportClientCertAndKey(newCrt, newKey)
+	if err != nil {
+		t.Fatalf("Did not expect error: %s", err)
+	}
+
+	// Check - do files exist?
+	if _, err := os.Stat(path.Join(tmpDir, "certs", "client-cert.pem")); err != nil {
+		t.Fatalf("Did not expect error: %s", err)
+	}
+	if _, err := os.Stat(path.Join(tmpDir, "certs", "client-key.pem")); err != nil {
+		t.Fatalf("Did not expect error: %s", err)
+	}
+}

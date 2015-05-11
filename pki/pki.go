@@ -263,6 +263,41 @@ func (p *PKI) ImportCA(name string, certPath string) error {
 	return nil
 }
 
+// Overrides the default client certificate with a new one
+func (p *PKI) ImportClientCertAndKey(certPath string, keyPath string) error {
+	cert, err := ioutil.ReadFile(certPath)
+
+	if err != nil {
+		return err
+	}
+
+	key, err := ioutil.ReadFile(keyPath)
+
+	if err != nil {
+		return err
+	}
+
+	// import cert
+	if strings.Contains(string(cert), CertificatePreamble) {
+		err = ioutil.WriteFile(p.Config.ClientCertPath, cert, 0600)
+		if err != nil {
+			return err
+		}
+
+		// import key
+		if strings.Contains(string(key), KeyPreamble) {
+			err = ioutil.WriteFile(p.Config.ClientKeyPath, key, 0600)
+		} else {
+			return errors.New(fmt.Sprintf("Key provided is not valid, no %s present", KeyPreamble))
+		}
+
+	} else {
+		return errors.New(fmt.Sprintf("Certificate provided is not valid, no %s present", CertificatePreamble))
+	}
+
+	return err
+}
+
 func (p *PKI) discoverCAs() (*x509.CertPool, error) {
 	certPool := x509.NewCertPool()
 
@@ -296,9 +331,4 @@ func (p *PKI) discoverCAs() (*x509.CertPool, error) {
 	}
 
 	return certPool, err
-}
-
-func (p *PKI) discoverClientCerts() ([]tls.Certificate, error) {
-	var certificates []tls.Certificate
-	return certificates, nil
 }

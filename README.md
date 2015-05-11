@@ -59,8 +59,7 @@ Download these files to your local system. From the client, we import them back 
 
 ```
 mirror pki --importCA --certFile ca.crt
-mirror pki --importClientCert --certFile client.crt
-mirror pki --importClientKey --keyFile client.pem
+mirror pki --importClientCert --certFile client.crt --importClientKey --keyFile client.pem
 ```
 
 We can now communicate securely with the remote host over a trusted connection:
