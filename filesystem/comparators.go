@@ -1,24 +1,13 @@
 package filesystem
 
-type FileComparator interface {
-	// Compare two files and return true if they differ
-	Compare(src File, dest File) FileComparisonResult
-}
-
-type FileComparisonResult struct {
-	IsDifferent   bool
-	IsNonExistent bool
-}
+// A function that returns true iff the src and dest files are the same
+// based on their definition
+type FileComparator func(src File, dest File) bool
 
 // Compares the last modified time of the File
-type ModifiedComparator struct{}
-
-func (c *ModifiedComparator) Compare(src File, dest File) FileComparisonResult {
-	res := &FileComparisonResult{
-		IsNonExistent: (dest == nil),
+var ModifiedComparator = func(src File, dest File) bool {
+	if dest == nil || src.ModTime().After(dest.ModTime()) {
+		return false
 	}
-	if src.ModTime().After(dest.ModTime()) {
-		res.IsDifferent = true
-	}
-	return *res
+	return true
 }

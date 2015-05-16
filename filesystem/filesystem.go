@@ -17,11 +17,10 @@ type FileSystem interface {
 // Simple File abstraction (based on os.FileInfo)
 //
 // All local and remote files will be represented as a File.
-// It is up to the specific FileSystem implementation to a
+// It is up to the specific FileSystem implementation to uphold this
 //
 type File interface {
-	Name() string // base name of the file
-	//FullName() string   // fully qualified path to the file
+	Name() string       // Fully qualified path to file
 	Size() int64        // length in bytes for regular files; system-dependent for others
 	ModTime() time.Time // modification time
 	IsDir() bool        // abbreviation for Mode().IsDir()

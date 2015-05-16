@@ -22,10 +22,10 @@ func (e *excludes) Set(value string) error {
 }
 
 type SyncCommand struct {
-	Meta Meta
-	Dest string
-	Src  string
-	//Filters []string
+	Meta    Meta
+	Dest    string
+	Src     string
+	Filters []string
 	Exclude excludes
 }
 

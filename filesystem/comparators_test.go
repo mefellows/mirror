@@ -6,7 +6,6 @@ import (
 )
 
 func TestModifiedComparator(t *testing.T) {
-	comp := &ModifiedComparator{}
 	oldFile := &MockFile{}
 	oldFile.MockIsDir = false
 	oldFile.MockSize = 1024
@@ -21,8 +20,8 @@ func TestModifiedComparator(t *testing.T) {
 	newFile.MockPath = "/foo/bar"
 	newFile.MockModTime = time.Now()
 
-	res := comp.Compare(newFile, oldFile)
-	if !res.IsDifferent {
+	res := ModifiedComparator(newFile, oldFile)
+	if res {
 		t.Fatalf("Expect files to be different, got newFile: %s and oldFile: %s", newFile.ModTime(), oldFile.ModTime())
 	}
 }

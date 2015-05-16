@@ -1,7 +1,8 @@
 package filesystem
 
 import (
-//	"fmt"
+	"errors"
+	"sync"
 )
 
 // A FileTree is a two-way linked Tree data-structure the represents
@@ -14,22 +15,62 @@ type FileTree interface {
 	File() File
 }
 
-// Diff two FileTrees - the result of the diff will be two Trees:
+// Convert a FileTree to an Ordered ListMap
+func FileTreeToMap(tree FileTree) (map[string]File, error) {
+
+	if tree.File() == nil {
+		return nil, errors.New("Empty tree")
+	}
+
+	fileMap := map[string]File{}
+
+	treeFunc := func(tree FileTree) (FileTree, error) {
+		if _, present := fileMap[tree.File().Name()]; !present {
+			fileMap[tree.File().Name()] = tree.File()
+		}
+		return tree, nil
+	}
+
+	err := FileTreeWalk(tree, treeFunc)
+
+	return fileMap, err
+}
+
+// Compare two file trees given a comparison function that returns true if two files are 'identical' by
+// their own definition.
 //
-// 1. `update` containing only the updates/new additions required to be made to the target Tree
-// 2. `delete` containing only the deletions required on the target Tree
-//
-// If a client was then to perform the corresponding updates and deletions on the target Tree
-// it would then be identical in structure to the src Tree.
-//
-// It is up to the client to decide how to act on this information
-//
-// The default diffing algorithm uses modification time (`ModificationTimeFileComparator`) to determine whether or not the file is different.
-// Different comparison strategies may be employed by the client (for instance, S3 may prefer to use hashes).
-//
-func FileTreeDiff(src FileTree, target FileTree, comparator FileComparator) (update FileTree, delete FileTree, err error) {
-	// TODO: Implement a tree diff algorithm
-	return nil, nil, nil
+// Best we can do here is O(n) - we need to traverse 'src' and then compare 'target'
+func FileTreeDiff(src FileTree, target FileTree, comparators ...func(left File, right File) bool) (diff []File, err error) {
+	// Prep our two trees into lists
+	var leftMap map[string]File
+	var rightMap map[string]File
+	var done sync.WaitGroup
+	done.Add(2)
+	go func() {
+		leftMap, err = FileTreeToMap(src)
+		done.Done()
+	}()
+	go func() {
+		rightMap, err = FileTreeToMap(target)
+		done.Done()
+	}()
+	done.Wait()
+
+	// Iterate over the src list, comparing each item to the corresponding
+	// match in the target Map
+	diff = make([]File, 0)
+	for filename, file := range leftMap {
+		rightFile := rightMap[filename]
+		// All comparators need to agree they are NOT different (false)
+		for _, c := range comparators {
+			if !c(file, rightFile) {
+				diff = append(diff, file)
+				break
+			}
+		}
+	}
+
+	return diff, nil
 }
 
 // Recursively walk a FileTree and run a self-type function on each node.

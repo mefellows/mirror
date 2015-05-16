@@ -47,21 +47,22 @@ func (f *MockFile) Name() string {
 	return f.MockName
 }
 
-//func (f *MockFile) FullName() string {
-//	return f.MockPath
-//}
 func (f *MockFile) Size() int64 {
 	return f.MockSize
 }
+
 func (f *MockFile) ModTime() time.Time {
 	return f.MockModTime
 }
+
 func (f *MockFile) IsDir() bool {
 	return f.MockIsDir
 }
+
 func (f *MockFile) Mode() os.FileMode {
 	return f.MockFileMode
 }
+
 func (f *MockFile) Sys() interface{} {
 	return f.MockFileSys
 }
