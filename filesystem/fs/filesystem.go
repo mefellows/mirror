@@ -2,9 +2,11 @@ package fs
 
 import (
 	"errors"
+	"fmt"
 	"github.com/mefellows/mirror/filesystem"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -14,20 +16,37 @@ type StdFileSystem struct {
 }
 
 func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
-	readFiles, err := ioutil.ReadDir(dir)
-	if err != nil {
+	readFiles, err := ioutil.ReadDir(fmt.Sprintf("%v/", dir))
+	if err == nil {
 		files := make([]filesystem.File, len(readFiles))
 
 		for i, file := range readFiles {
-			files[i] = file
+			files[i] = FromFileInfo(dir, file)
 		}
+
 		return files, nil
 	} else {
 		return nil, err
 	}
 }
+
+// Converts a FileInfo -> StdFile
+func FromFileInfo(dir string, i os.FileInfo) StdFile {
+	path := fmt.Sprintf("%s/%s", dir, i.Name())
+	file := StdFile{
+		StdName:    i.Name(),
+		StdPath:    path,
+		StdIsDir:   i.IsDir(),
+		StdMode:    i.Mode(),
+		StdSize:    i.Size(),
+		StdModTime: i.ModTime(),
+	}
+	return file
+
+}
+
 func (fs StdFileSystem) Read(f filesystem.File) ([]byte, error) {
-	return ioutil.ReadFile(f.Name())
+	return ioutil.ReadFile(f.Path())
 }
 
 func (fs StdFileSystem) Delete(file filesystem.File) error {
@@ -35,11 +54,51 @@ func (fs StdFileSystem) Delete(file filesystem.File) error {
 }
 
 func (fs StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(file.Name(), data, perm)
+	parentPath := filepath.Dir(file.Path())
+	if _, err := os.Stat(parentPath); err != nil {
+		dir := &StdFile{
+			StdPath: parentPath,
+			StdMode: 0755,
+		}
+		fs.MkDir(dir)
+	}
+	return ioutil.WriteFile(file.Path(), data, perm)
 }
 
-func (fs StdFileSystem) FileTree() filesystem.FileTree {
-	return nil
+func (fs StdFileSystem) MkDir(file filesystem.File) error {
+	return os.MkdirAll(file.Path(), file.Mode())
+}
+
+func (fs StdFileSystem) FileTree(file filesystem.File) filesystem.FileTree {
+	if file == nil || !file.IsDir() {
+		return nil
+	}
+	tree := &filesystem.StdFileSystemTree{}
+	tree.StdFile = file
+	return fs.readDir(file, tree)
+}
+
+// Recursively read a directory structure and create a tree structure out of it
+// TODO: fix symlinks/cyclic dependencies etc.
+func (fs StdFileSystem) readDir(curFile filesystem.File, parent *filesystem.StdFileSystemTree) filesystem.FileTree {
+	tree := &filesystem.StdFileSystemTree{}
+	tree.StdFile = curFile
+	tree.StdParentNode = parent
+
+	// TODO: Symlink check not working...
+	if curFile.IsDir() || curFile.Mode() == os.ModeSymlink {
+
+		tree.StdChildNodes = make([]filesystem.FileTree, 0)
+		dirListing, _ := fs.Dir(curFile.Path())
+		if dirListing != nil && len(dirListing) > 0 {
+			for _, file := range dirListing {
+				tree.StdChildNodes = append(tree.StdChildNodes, fs.readDir(file, tree))
+			}
+		}
+	}
+
+	return tree
+
 }
 
 type StdFile struct {
@@ -53,6 +112,10 @@ type StdFile struct {
 
 func (f StdFile) Name() string {
 	return f.StdName
+}
+
+func (f StdFile) Path() string {
+	return f.StdPath
 }
 
 func (f StdFile) Size() int64 {

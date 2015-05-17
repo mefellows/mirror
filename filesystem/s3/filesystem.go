@@ -134,16 +134,21 @@ func (fs S3FileSystem) Write(file filesystem.File, data []byte, perm os.FileMode
 	return fs.bucket.Put(fileName, data, mimeType(file), s3.BucketOwnerFull, s3.Options{})
 }
 
+func (fs S3FileSystem) MkDir(file filesystem.File) error {
+	return errors.New("Function not yet implemented")
+}
+
 func (fs S3FileSystem) Delete(file filesystem.File) error {
 	return errors.New("Function not yet implemented")
 }
 
-func (fs S3FileSystem) FileTree() filesystem.FileTree {
+func (fs S3FileSystem) FileTree(root filesystem.File) filesystem.FileTree {
 	return nil
 }
 
 type S3File struct {
 	S3Name    string      // base name of the file
+	S3Path    string      // Path to file
 	S3Size    int64       // length in bytes for regular files; system-dependent for others
 	S3ModTime time.Time   // modification time
 	S3IsDir   bool        // abbreviation for Mode().IsDir()
@@ -152,6 +157,10 @@ type S3File struct {
 
 func (f S3File) Name() string {
 	return f.S3Name
+}
+
+func (f S3File) Path() string {
+	return f.S3Path
 }
 
 func (f S3File) Size() int64 {

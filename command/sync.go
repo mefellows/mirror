@@ -6,6 +6,8 @@ import (
 	"github.com/mefellows/mirror/filesystem"
 	fs "github.com/mefellows/mirror/filesystem/fs"
 	s3 "github.com/mefellows/mirror/filesystem/s3"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +18,6 @@ func (e *excludes) String() string {
 }
 
 func (e *excludes) Set(value string) error {
-	fmt.Printf("%s\n", value)
 	*e = append(*e, value)
 	return nil
 }
@@ -46,20 +47,76 @@ func (c *SyncCommand) Run(args []string) int {
 
 	// Obviously, this can be optimised to buffer reads directly into a write, instead of a copy and then write
 	// Possibly, pass the reader into the writer and do it that way?
-	fromFile, fromFs, _ := makeFile(c.Src)
-	toFile, toFs, _ := makeFile(c.Dest)
-	bytes, err := fromFs.Read(fromFile)
+	fromFile, fromFs, err := makeFile(c.Src)
 	if err != nil {
-		fmt.Printf("Error reading from source file: %s", err.Error())
+		c.Meta.Ui.Error(fmt.Sprintf("Error opening src file: %v", err))
 		return 1
 	}
-	err = toFs.Write(toFile, bytes, 0644)
+	toFile, toFs, err := makeFile(c.Dest)
 	if err != nil {
-		fmt.Printf("Error writing to remote path: %s", err.Error())
+		c.Meta.Ui.Error(fmt.Sprintf("Error opening dest file: %v", err))
 		return 1
 	}
 
+	if fromFile.IsDir() {
+		diff, err := filesystem.FileTreeDiff(fromFs.FileTree(fromFile), toFs.FileTree(toFile), filesystem.ModifiedComparator)
+		if err == nil {
+			for _, file := range diff {
+				toFile = mkToFile(c.Src, c.Dest, file)
+
+				if err == nil {
+					if file.IsDir() {
+						fmt.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
+						toFs.MkDir(toFile)
+					} else {
+						fmt.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
+						bytes, err := fromFs.Read(file)
+						fmt.Printf("Read bytes: %s\n", len(bytes))
+						err = toFs.Write(toFile, bytes, file.Mode())
+						if err != nil {
+							c.Meta.Ui.Error(fmt.Sprintf("Error copying file %s: %v", file.Path(), err))
+						}
+					}
+				}
+			}
+		} else {
+			c.Meta.Ui.Error(fmt.Sprintf("Error: %v\n", err))
+		}
+	} else {
+
+		bytes, err := fromFs.Read(fromFile)
+		if err != nil {
+			fmt.Printf("Error reading from source file: %s", err.Error())
+			return 1
+		}
+		err = toFs.Write(toFile, bytes, 0644)
+		if err != nil {
+			fmt.Printf("Error writing to remote path: %s", err.Error())
+			return 1
+		}
+	}
+
 	return 0
+}
+
+// TODO: This is still StdFS Specific
+func mkToFile(fromBase string, toBase string, file filesystem.File) filesystem.File {
+
+	// src:  /foo/bar/baz/bat.txt
+	// dest: /lol/
+	// target: /lol/bat.txt
+
+	path := fmt.Sprintf("%s", strings.Replace(file.Path(), fromBase, toBase, -1))
+	toFile := fs.StdFile{
+		StdName:    file.Name(),
+		StdPath:    path,
+		StdIsDir:   file.IsDir(),
+		StdMode:    file.Mode(),
+		StdSize:    file.Size(),
+		StdModTime: file.ModTime(),
+	}
+	return toFile
+
 }
 
 // TODO: Detect File and Filesystem type
@@ -78,9 +135,9 @@ func makeFile(file string) (filesystem.File, filesystem.FileSystem, error) {
 		}
 	default:
 		filesys = fs.StdFileSystem{}
-		f = fs.StdFile{
-			// TODO: this should be in a factory method provided by the implementor
-			StdName: file,
+		i, err := os.Stat(file)
+		if err == nil {
+			f = fs.FromFileInfo(filepath.Dir(file), i)
 		}
 	}
 

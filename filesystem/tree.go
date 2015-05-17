@@ -15,10 +15,21 @@ type FileTree interface {
 	File() File
 }
 
+// Default Impl
+type StdFileSystemTree struct {
+	StdFile       File
+	StdParentNode FileTree
+	StdChildNodes []FileTree
+}
+
+func (fs StdFileSystemTree) ParentNode() FileTree   { return fs.StdParentNode }
+func (fs StdFileSystemTree) ChildNodes() []FileTree { return fs.StdChildNodes }
+func (fs StdFileSystemTree) File() File             { return fs.StdFile }
+
 // Convert a FileTree to an Ordered ListMap
 func FileTreeToMap(tree FileTree) (map[string]File, error) {
 
-	if tree.File() == nil {
+	if tree == nil || tree.File() == nil {
 		return nil, errors.New("Empty tree")
 	}
 

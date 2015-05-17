@@ -43,6 +43,10 @@ type MockFile struct {
 	MockFileSys  interface{}
 }
 
+func (f *MockFile) Path() string {
+	return f.MockPath
+}
+
 func (f *MockFile) Name() string {
 	return f.MockName
 }
