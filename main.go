@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/mefellows/mirror/command"
+	_ "github.com/mefellows/mirror/filesystem/fs"
+	_ "github.com/mefellows/mirror/filesystem/remote"
 	"github.com/mitchellh/cli"
 	"os"
 )

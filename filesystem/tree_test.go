@@ -3,21 +3,16 @@ package filesystem
 import (
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"testing"
 )
 
-func Test_MockFileTree(t *testing.T) {
+func Test_FileTree(t *testing.T) {
 	tree := makeFileTree()
 	if tree.ParentNode() != nil {
 		t.Fatal("tree.ParentNode() should be nil")
 	}
 	if tree.ChildNodes() == nil {
 		t.Fatal("tree.ChildNodes() is nil")
-	}
-	if tree.File() == nil {
-		t.Fatal("tree.File() is nil")
 	}
 	if tree.File().Size() == 0 {
 		t.Fatal("tree.File.Size() is nil")
@@ -30,7 +25,7 @@ func Test_MockFileTree(t *testing.T) {
 func makeFileTree() FileTree {
 
 	tree := &MockFileTree{}
-	tree.FileFile = makeFile(true, nil)
+	tree.FileFile = makeFile(true, File{})
 	tree.ParentNodeFileTree = nil
 	pnodes := make([]FileTree, 3)
 
@@ -94,54 +89,6 @@ func TestFileTreeWalk_Error(t *testing.T) {
 	if dirCount != 1 {
 		t.Fatalf("Expected to iterate over exactly 1 directory, got %d", dirCount)
 	}
-
-}
-
-func readDirectory() {
-	file, _ := os.OpenFile("/tmp", os.O_RDONLY, os.ModeTemporary)
-	defer file.Close()
-	// Convert to channel, much nicer
-readdir:
-	for {
-		fi, err := file.Readdir(10)
-		for _, file := range fi {
-			fmt.Printf("File: %s\n", file.Name())
-		}
-		if err == io.EOF {
-			fmt.Printf("EOF, moving on..")
-			break readdir
-		} else if err != nil {
-			fmt.Printf("Got error: %s", err)
-			break readdir
-		}
-	}
-
-}
-
-// As channels
-func readDirectoryChan() {
-	file, _ := os.OpenFile("/tmp", os.O_RDONLY, os.ModeTemporary)
-	defer file.Close()
-	waitDone := make(chan bool, 1)
-	chunkSize := 10
-
-	go func() {
-		for {
-			fi, err := file.Readdir(chunkSize)
-			for _, file := range fi {
-				fmt.Printf("File: %s\n", file.Name())
-			}
-			if err != nil {
-				fmt.Printf("Got error: %s", err)
-				waitDone <- true
-			}
-		}
-	}()
-
-	select {
-	case <-waitDone:
-		fmt.Printf("All done")
-	}
 }
 
 func TestFileTreeToMap(t *testing.T) {
@@ -154,7 +101,7 @@ func TestFileTreeToMap(t *testing.T) {
 }
 func TestFileTreeDiff(t *testing.T) {
 	tree := &MockFileTree{}
-	tree.FileFile = makeFile(true, nil)
+	tree.FileFile = makeFile(true, File{})
 	tree.ParentNodeFileTree = nil
 	pnodes := make([]FileTree, 3)
 
@@ -162,10 +109,10 @@ func TestFileTreeDiff(t *testing.T) {
 		nodes := make([]FileTree, 3)
 		node := &MockFileTree{}
 		node.ParentNodeFileTree = tree
-		node.FileFile = &MockFile{MockName: fmt.Sprintf("foo/%d", i)}
+		node.FileFile = File{FileName: fmt.Sprintf("foo/%d", i)}
 		for j := 0; j < 3; j++ {
 			treeNode := &MockFileTree{}
-			treeNode.FileFile = &MockFile{MockName: fmt.Sprintf("foo/%d/%d", i, j)}
+			treeNode.FileFile = File{FileName: fmt.Sprintf("foo/%d/%d", i, j)}
 			nodes[j] = treeNode
 		}
 		node.ChildNodesArray = nodes
@@ -174,7 +121,7 @@ func TestFileTreeDiff(t *testing.T) {
 	tree.ChildNodesArray = pnodes
 
 	tree2 := &MockFileTree{}
-	tree2.FileFile = makeFile(true, nil)
+	tree2.FileFile = makeFile(true, File{})
 	tree2.ParentNodeFileTree = nil
 	pnodes2 := make([]FileTree, 3)
 
@@ -182,10 +129,10 @@ func TestFileTreeDiff(t *testing.T) {
 		nodes := make([]FileTree, 3)
 		node := &MockFileTree{}
 		node.ParentNodeFileTree = tree2
-		node.FileFile = &MockFile{MockName: fmt.Sprintf("foo2/%d", i)}
+		node.FileFile = File{FilePath: fmt.Sprintf("foo2/%d", i)}
 		for j := 0; j < 3; j++ {
 			tree2Node := &MockFileTree{}
-			tree2Node.FileFile = &MockFile{MockName: fmt.Sprintf("foo/%d/%d", i, j)}
+			tree2Node.FileFile = File{FilePath: fmt.Sprintf("foo/%d/%d", i, j)}
 			nodes[j] = tree2Node
 		}
 		node.ChildNodesArray = nodes
@@ -194,7 +141,7 @@ func TestFileTreeDiff(t *testing.T) {
 	tree2.ChildNodesArray = pnodes2
 
 	var exists = func(l File, r File) bool {
-		if r != nil {
+		if r.Name() != "" {
 			return true
 		}
 		return false

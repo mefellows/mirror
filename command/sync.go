@@ -4,10 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem"
-	fs "github.com/mefellows/mirror/filesystem/fs"
-	s3 "github.com/mefellows/mirror/filesystem/s3"
-	"os"
-	"path/filepath"
+	utils "github.com/mefellows/mirror/filesystem/utils"
 	"strings"
 )
 
@@ -43,35 +40,33 @@ func (c *SyncCommand) Run(args []string) int {
 		return 1
 	}
 
-	c.Meta.Ui.Output(fmt.Sprintf("Would copy contents from '%s' to '%s'", c.Src, c.Dest))
+	c.Meta.Ui.Output(fmt.Sprintf("Syncing contents of '%s' -> '%s'", c.Src, c.Dest))
 
 	// Obviously, this can be optimised to buffer reads directly into a write, instead of a copy and then write
 	// Possibly, pass the reader into the writer and do it that way?
-	fromFile, fromFs, err := makeFile(c.Src)
+	fromFile, fromFs, err := utils.MakeFile(c.Src)
 	if err != nil {
 		c.Meta.Ui.Error(fmt.Sprintf("Error opening src file: %v", err))
 		return 1
 	}
-	toFile, toFs, err := makeFile(c.Dest)
-	if err != nil {
-		c.Meta.Ui.Error(fmt.Sprintf("Error opening dest file: %v", err))
-		return 1
-	}
 
 	if fromFile.IsDir() {
-		diff, err := filesystem.FileTreeDiff(fromFs.FileTree(fromFile), toFs.FileTree(toFile), filesystem.ModifiedComparator)
+		toFile, toFs, err := utils.MakeFile(c.Dest)
+		diff, err := filesystem.FileTreeDiff(
+			fromFs.FileTree(fromFile), toFs.FileTree(toFile), filesystem.ModifiedComparator)
+
 		if err == nil {
 			for _, file := range diff {
-				toFile = mkToFile(c.Src, c.Dest, file)
+				toFile = utils.MkToFile(c.Src, c.Dest, file)
 
 				if err == nil {
 					if file.IsDir() {
-						fmt.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
+						//log.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
 						toFs.MkDir(toFile)
 					} else {
-						fmt.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
+						//log.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
 						bytes, err := fromFs.Read(file)
-						fmt.Printf("Read bytes: %s\n", len(bytes))
+						//log.Printf("Read bytes: %s\n", len(bytes))
 						err = toFs.Write(toFile, bytes, file.Mode())
 						if err != nil {
 							c.Meta.Ui.Error(fmt.Sprintf("Error copying file %s: %v", file.Path(), err))
@@ -83,65 +78,26 @@ func (c *SyncCommand) Run(args []string) int {
 			c.Meta.Ui.Error(fmt.Sprintf("Error: %v\n", err))
 		}
 	} else {
+		toFile := utils.MkToFile(c.Src, c.Dest, fromFile)
+		toFs, err := utils.GetFileSystemFromFile(c.Dest)
+		if err != nil {
+			c.Meta.Ui.Error(fmt.Sprintf("Error opening dest file: %v", err))
+			return 1
+		}
 
 		bytes, err := fromFs.Read(fromFile)
 		if err != nil {
-			fmt.Printf("Error reading from source file: %s", err.Error())
+			c.Meta.Ui.Error(fmt.Sprintf("Error reading from source file: %s", err.Error()))
 			return 1
 		}
 		err = toFs.Write(toFile, bytes, 0644)
 		if err != nil {
-			fmt.Printf("Error writing to remote path: %s", err.Error())
+			c.Meta.Ui.Error(fmt.Sprintf("Error writing to remote path: %s", err.Error()))
 			return 1
 		}
 	}
 
 	return 0
-}
-
-// TODO: This is still StdFS Specific
-func mkToFile(fromBase string, toBase string, file filesystem.File) filesystem.File {
-
-	// src:  /foo/bar/baz/bat.txt
-	// dest: /lol/
-	// target: /lol/bat.txt
-
-	path := fmt.Sprintf("%s", strings.Replace(file.Path(), fromBase, toBase, -1))
-	toFile := fs.StdFile{
-		StdName:    file.Name(),
-		StdPath:    path,
-		StdIsDir:   file.IsDir(),
-		StdMode:    file.Mode(),
-		StdSize:    file.Size(),
-		StdModTime: file.ModTime(),
-	}
-	return toFile
-
-}
-
-// TODO: Detect File and Filesystem type
-// Register FileSystems as plugins on boot?
-func makeFile(file string) (filesystem.File, filesystem.FileSystem, error) {
-	//
-	var filesys filesystem.FileSystem
-	var f filesystem.File
-	var err error
-	switch {
-	case strings.HasPrefix(file, "s3://"):
-		filesys, err = s3.New(file)
-		f = s3.S3File{
-			// TODO: this should be in a factory method provided by the implementor
-			S3Name: file,
-		}
-	default:
-		filesys = fs.StdFileSystem{}
-		i, err := os.Stat(file)
-		if err == nil {
-			f = fs.FromFileInfo(filepath.Dir(file), i)
-		}
-	}
-
-	return f, filesys, err
 }
 
 func (c *SyncCommand) Help() string {

@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/mefellows/mirror/filesystem/fs"
 	"github.com/mefellows/mirror/filesystem/remote"
+	utils "github.com/mefellows/mirror/filesystem/utils"
 	"github.com/mefellows/mirror/pki"
 	"log"
 	"net/rpc"
@@ -73,9 +73,16 @@ func (c *RemoteCommand) Run(args []string) int {
 	client = rpc.NewClient(conn)
 
 	// Perform remote operation
-	fromFile := fs.StdFile{StdName: c.Src}
-	toFile := fs.StdFile{StdName: c.Dest}
-	fromFs := fs.StdFileSystem{}
+	fromFile, fromFs, err := utils.MakeFile(c.Src)
+	if err != nil {
+		log.Printf("Error making from file: %v", err)
+	}
+	toFile, _, err := utils.MakeFile(c.Src)
+	if err != nil {
+		log.Printf("Error making to file: %v", err)
+	}
+	//toFs, err := utils.GetFileSystemFromFile(c.Dest)
+	//fromFs, err := utils.GetFileSystemFromFile(c.Src)
 	bytes, err := fromFs.Read(fromFile)
 	if err != nil {
 		c.Meta.Ui.Error(fmt.Sprintf("Error reading from source file: %s", err.Error()))
@@ -83,7 +90,7 @@ func (c *RemoteCommand) Run(args []string) int {
 	}
 	rpcargs := &remote.WriteRequest{toFile, bytes, 0644}
 	var reply remote.WriteResponse
-	err = client.Call("RemoteFileSystem.Write", rpcargs, &reply)
+	err = client.Call("RemoteFileSystem.RemoteWrite", rpcargs, &reply)
 
 	if reply.Success {
 		c.Meta.Ui.Output(fmt.Sprintf("Copied '%s' to '%s'", c.Src, c.Dest))

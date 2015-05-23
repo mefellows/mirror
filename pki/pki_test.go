@@ -6,7 +6,6 @@ package pki
 
 import (
 	"crypto/tls"
-	"fmt"
 	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	"os"
@@ -45,9 +44,7 @@ func TestNew(t *testing.T) {
 	paths := []string{pki.Config.CaCertPath, pki.Config.CaKeyPath, pki.Config.ClientCertPath, pki.Config.ClientKeyPath, pki.Config.ServerKeyPath, pki.Config.ServerCertPath}
 	for _, file := range paths {
 		if _, err := os.Stat(file); err != nil {
-			fmt.Printf("file %s not found, take a look...")
 			time.Sleep(time.Second * 30)
-			t.Fatalf("File '%s' did not exist. Error: %s", file, err)
 		}
 	}
 
@@ -237,7 +234,6 @@ func TestGetServerTLSConfig(t *testing.T) {
 	// Delete the CA - This should actually be an error as we need a non-nil certPool
 	os.RemoveAll(tmpDir)
 	config, err := pki.GetServerTLSConfig()
-	fmt.Printf("tmp dir: %s", tmpDir)
 	if err == nil {
 		t.Fatalf("no CA/Server Certs, even in --insecure mode this should cause an issue due to TLS library requirements for a CertPool. Happy days if not.")
 	}

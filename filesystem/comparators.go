@@ -6,7 +6,7 @@ type FileComparator func(src File, dest File) bool
 
 // Compares the last modified time of the File
 var ModifiedComparator = func(src File, dest File) bool {
-	if dest == nil || src.ModTime().After(dest.ModTime()) {
+	if src.ModTime().After(dest.ModTime()) {
 		return false
 	}
 	return true

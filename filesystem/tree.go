@@ -29,15 +29,15 @@ func (fs StdFileSystemTree) File() File             { return fs.StdFile }
 // Convert a FileTree to an Ordered ListMap
 func FileTreeToMap(tree FileTree) (map[string]File, error) {
 
-	if tree == nil || tree.File() == nil {
+	if tree == nil {
 		return nil, errors.New("Empty tree")
 	}
 
 	fileMap := map[string]File{}
 
 	treeFunc := func(tree FileTree) (FileTree, error) {
-		if _, present := fileMap[tree.File().Name()]; !present {
-			fileMap[tree.File().Name()] = tree.File()
+		if _, present := fileMap[tree.File().Path()]; !present {
+			fileMap[tree.File().Path()] = tree.File()
 		}
 		return tree, nil
 	}
@@ -52,7 +52,7 @@ func FileTreeToMap(tree FileTree) (map[string]File, error) {
 //
 // Best we can do here is O(n) - we need to traverse 'src' and then compare 'target'
 func FileTreeDiff(src FileTree, target FileTree, comparators ...func(left File, right File) bool) (diff []File, err error) {
-	// Prep our two trees into lists
+	// Prep our two trees into lists concurrently
 	var leftMap map[string]File
 	var rightMap map[string]File
 	var done sync.WaitGroup

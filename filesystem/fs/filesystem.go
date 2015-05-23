@@ -4,15 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem"
+	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // Basic File System implementation using OOTB Golang constructs
 type StdFileSystem struct {
 	tree filesystem.FileTree // Returns a FileTree structure of Files representing the FileSystem hierarchy
+	root string
+}
+
+func init() {
+	mirror.FileSystemFactories.Register(NewStdFileSystem, "file")
+}
+
+func NewStdFileSystem(url string) (filesystem.FileSystem, error) {
+	// Resolve/Validate URL?
+	//return StdFileSystem{}, errors.New("Not yet implemented")
+	return StdFileSystem{root: url}, nil
 }
 
 func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
@@ -31,22 +42,29 @@ func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
 }
 
 // Converts a FileInfo -> StdFile
-func FromFileInfo(dir string, i os.FileInfo) StdFile {
+func FromFileInfo(dir string, i os.FileInfo) filesystem.File {
 	path := fmt.Sprintf("%s/%s", dir, i.Name())
-	file := StdFile{
-		StdName:    i.Name(),
-		StdPath:    path,
-		StdIsDir:   i.IsDir(),
-		StdMode:    i.Mode(),
-		StdSize:    i.Size(),
-		StdModTime: i.ModTime(),
+	file := filesystem.File{
+		FileName:    i.Name(),
+		FilePath:    path,
+		FileMode:    i.Mode(),
+		FileSize:    i.Size(),
+		FileModTime: i.ModTime(),
 	}
 	return file
-
 }
 
 func (fs StdFileSystem) Read(f filesystem.File) ([]byte, error) {
 	return ioutil.ReadFile(f.Path())
+}
+
+func (fs StdFileSystem) ReadFile(f string) (filesystem.File, error) {
+	i, err := os.Stat(f)
+	parentPath := filepath.Dir(f)
+	if err != nil {
+		return filesystem.File{}, err
+	}
+	return FromFileInfo(parentPath, i), err
 }
 
 func (fs StdFileSystem) Delete(file filesystem.File) error {
@@ -56,9 +74,9 @@ func (fs StdFileSystem) Delete(file filesystem.File) error {
 func (fs StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
 	parentPath := filepath.Dir(file.Path())
 	if _, err := os.Stat(parentPath); err != nil {
-		dir := &StdFile{
-			StdPath: parentPath,
-			StdMode: 0755,
+		dir := filesystem.File{
+			FilePath: parentPath,
+			FileMode: 0755,
 		}
 		fs.MkDir(dir)
 	}
@@ -70,7 +88,7 @@ func (fs StdFileSystem) MkDir(file filesystem.File) error {
 }
 
 func (fs StdFileSystem) FileTree(file filesystem.File) filesystem.FileTree {
-	if file == nil || !file.IsDir() {
+	if !file.IsDir() {
 		return nil
 	}
 	tree := &filesystem.StdFileSystemTree{}
@@ -98,38 +116,4 @@ func (fs StdFileSystem) readDir(curFile filesystem.File, parent *filesystem.StdF
 	}
 
 	return tree
-
-}
-
-type StdFile struct {
-	StdName    string      // base name of the file
-	StdPath    string      // base name of the file
-	StdSize    int64       // length in bytes for regular files; system-dependent for others
-	StdModTime time.Time   // modification time
-	StdMode    os.FileMode // File details including perms
-	StdIsDir   bool        // abbreviation for Mode().IsDir()
-}
-
-func (f StdFile) Name() string {
-	return f.StdName
-}
-
-func (f StdFile) Path() string {
-	return f.StdPath
-}
-
-func (f StdFile) Size() int64 {
-	return f.StdSize
-}
-func (f StdFile) ModTime() time.Time {
-	return f.StdModTime
-}
-func (f StdFile) IsDir() bool {
-	return f.StdIsDir
-}
-func (f StdFile) Mode() os.FileMode {
-	return f.StdMode
-}
-func (f StdFile) Sys() interface{} {
-	return nil
 }

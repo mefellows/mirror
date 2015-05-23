@@ -5,6 +5,7 @@ import (
 	"github.com/goamz/goamz/aws"
 	"github.com/goamz/goamz/s3"
 	"github.com/mefellows/mirror/filesystem"
+	"github.com/mefellows/mirror/mirror"
 	"mime"
 	"os"
 	"path/filepath"
@@ -39,6 +40,14 @@ type S3FileSystem struct {
 	bucket    *s3.Bucket
 }
 
+func init() {
+	mirror.FileSystemFactories.Register(NewS3FileSystem, "s3")
+}
+
+func NewS3FileSystem(url string) (filesystem.FileSystem, error) {
+	return New(url)
+}
+
 type S3Config struct {
 	bucket  string
 	region  string
@@ -52,6 +61,9 @@ func New(url string) (*S3FileSystem, error) {
 		return nil, err
 	}
 	config, err := config(url)
+	if err != nil {
+		return nil, err
+	}
 	region := aws.Regions[config.region]
 	service := s3.New(*auth, region)
 
@@ -132,6 +144,10 @@ func (fs S3FileSystem) Read(f filesystem.File) ([]byte, error) {
 func (fs S3FileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
 	fileName := strings.TrimPrefix(file.Name(), fs.config.baseURL)
 	return fs.bucket.Put(fileName, data, mimeType(file), s3.BucketOwnerFull, s3.Options{})
+}
+
+func (fs S3FileSystem) ReadFile(file string) (filesystem.File, error) {
+	return filesystem.File{}, errors.New("Function not yet implemented")
 }
 
 func (fs S3FileSystem) MkDir(file filesystem.File) error {

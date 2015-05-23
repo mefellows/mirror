@@ -3,6 +3,7 @@ package s3
 import (
 	"github.com/goamz/goamz/aws"
 	//"github.com/goamz/goamz/s3"
+	"github.com/mefellows/mirror/filesystem"
 	"os"
 	"testing"
 )
@@ -133,19 +134,19 @@ func TestConfig_InvalidURL(t *testing.T) {
 }
 
 func TestExt(t *testing.T) {
-	file := &S3File{S3Name: "/foo/bar/baz.txt"}
+	file := filesystem.File{FileName: "/foo/bar/baz.txt"}
 	if ext(file) != ".txt" {
 		t.Fatalf("Expected .txt extension, got %s", ext(file))
 	}
 }
 
 func TestMime(t *testing.T) {
-	file := &S3File{S3Name: "/foo/bar/baz.txt"}
+	file := filesystem.File{FileName: "/foo/bar/baz.txt"}
 	if mimeType(file) != "text/plain; charset=utf-8" {
 		t.Fatalf("Expected text/plain mime, got %s", mimeType(file))
 	}
 
-	file = &S3File{S3Name: "baz.json"}
+	file = filesystem.File{FileName: "baz.json"}
 	if mimeType(file) != "application/json" {
 		t.Fatalf("Expected application/json mime, got %s", mimeType(file))
 	}

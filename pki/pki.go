@@ -232,7 +232,6 @@ func (p *PKI) GetServerTLSConfig() (*tls.Config, error) {
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
 	if p.Config.Insecure {
-		fmt.Printf("Setting server auth to insecure")
 		config.ClientAuth = tls.NoClientCert
 	}
 

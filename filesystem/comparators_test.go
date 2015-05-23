@@ -6,19 +6,19 @@ import (
 )
 
 func TestModifiedComparator(t *testing.T) {
-	oldFile := &MockFile{}
-	oldFile.MockIsDir = false
-	oldFile.MockSize = 1024
-	oldFile.MockName = "bar"
-	oldFile.MockPath = "/foo/bar"
-	oldFile.MockModTime = time.Now()
+	oldFile := File{
+		FileSize:    1024,
+		FileName:    "bar",
+		FilePath:    "/foo/bar",
+		FileModTime: time.Now(),
+	}
 
-	newFile := &MockFile{}
-	newFile.MockIsDir = false
-	newFile.MockSize = 1024
-	newFile.MockName = "bar"
-	newFile.MockPath = "/foo/bar"
-	newFile.MockModTime = time.Now()
+	newFile := File{
+		FileSize:    1024,
+		FileName:    "bar",
+		FilePath:    "/foo/bar",
+		FileModTime: time.Now(),
+	}
 
 	res := ModifiedComparator(newFile, oldFile)
 	if res {

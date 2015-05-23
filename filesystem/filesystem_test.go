@@ -20,7 +20,7 @@ func Test_MockFileSystem(t *testing.T) {
 	ioutil.WriteFile("/tmp/dat1", d1, 0644)
 
 	mock := &MockFileSystem{}
-	mockFile := makeFile(false, nil)
+	mockFile := makeFile(false, File{})
 	d1 = []byte("hello\ngo\n")
 	path := fmt.Sprintf("%s%s-%d", os.TempDir(), "testmockfilesystem-", time.Now().UnixNano())
 	ioutil.WriteFile(path, d1, 0644)
@@ -37,27 +37,26 @@ func Test_MockFileSystem(t *testing.T) {
 	}
 	mock.DirError = errors.New("Directory doesn't exist")
 	mock.Dir("foo")
-	mock.FileTree()
-	mock.Write(nil, make([]byte, 0))
+	mock.FileTree(File{})
+	mock.Write(File{}, make([]byte, 0), 0644)
 
 }
 
 func makeFile(isDir bool, parent File) File {
-	f := &MockFile{}
-	f.MockIsDir = isDir
+	f := File{}
 	if isDir {
-		f.MockFileMode = os.ModeDir
+		f.FileMode = os.ModeDir
 	} else {
-		f.MockFileMode = 0644
+		f.FileMode = 0644
 	}
-	f.MockSize = rand.Int63()
+	f.FileSize = rand.Int63()
 	prefix := ""
-	if parent != nil {
+	if parent.Name() != "" {
 		prefix = fmt.Sprintf("%s/", parent.Name())
 	}
-	f.MockName = fmt.Sprintf("%s%s", prefix, makeRandomWord())
-	f.MockPath = fmt.Sprintf("%s%s", prefix, makeRandomWord())
-	f.MockModTime = time.Now()
+	f.FileName = fmt.Sprintf("%s%s", prefix, makeRandomWord())
+	f.FilePath = fmt.Sprintf("%s%s", prefix, makeRandomWord())
+	f.FileModTime = time.Now()
 	return f
 }
 

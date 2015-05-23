@@ -14,22 +14,37 @@ type MockFileSystem struct {
 	DirFiles []File
 	DirError error
 
-	FileTreeTree FileTree
+	FileTreeTree  FileTree
+	MockFile      File
+	MockFileError error
 }
 
-func (fs *MockFileSystem) Dir(string) ([]File, error) {
+func (fs MockFileSystem) Dir(string) ([]File, error) {
 	return fs.DirFiles, fs.DirError
 
 }
-func (fs *MockFileSystem) Read(File) ([]byte, error) {
+
+func (fs MockFileSystem) Read(File) ([]byte, error) {
 	return fs.ReadBytes, fs.ReadError
 }
 
-func (fs *MockFileSystem) Write(File, []byte) error {
+func (fs MockFileSystem) MkDir(file File) error {
+	return fs.DirError
+}
+
+func (fs MockFileSystem) ReadFile(file string) (File, error) {
+	return fs.MockFile, fs.MockFileError
+}
+
+func (fs MockFileSystem) Delete(File) error {
+	return fs.MockFileError
+}
+
+func (fs MockFileSystem) Write(File, []byte, os.FileMode) error {
 	return fs.WriteError
 }
 
-func (fs *MockFileSystem) FileTree() FileTree {
+func (fs MockFileSystem) FileTree(root File) FileTree {
 	return fs.FileTreeTree
 }
 
