@@ -17,10 +17,35 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var CertificatePreamble = "-----BEGIN CERTIFICATE-----"
 var KeyPreamble = "-----BEGIN RSA PRIVATE KEY-----"
+
+type Mirror struct {
+	sync.Mutex
+	ClientTlsConfig *tls.Config
+	ServerTlsConfig *tls.Config
+}
+
+var MirrorConfig Mirror
+
+func init() {
+	pki, _ := New()
+	clientConfig, _ := pki.GetClientTLSConfig()
+	serverConfig, _ := pki.GetServerTLSConfig()
+	MirrorConfig.ClientTlsConfig = clientConfig
+	MirrorConfig.ServerTlsConfig = serverConfig
+}
+
+func (m *Mirror) SetClientTLSConfig(config *tls.Config) {
+	m.ClientTlsConfig = config
+}
+
+func (m *Mirror) SetServerTLSConfig(config *tls.Config) {
+	m.ServerTlsConfig = config
+}
 
 // General Mirror Pubic Key Infrastructure functions
 

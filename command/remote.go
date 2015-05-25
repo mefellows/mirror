@@ -1,14 +1,11 @@
 package command
 
 import (
-	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/mefellows/mirror/filesystem/remote"
 	utils "github.com/mefellows/mirror/filesystem/utils"
-	"github.com/mefellows/mirror/pki"
-	"log"
-	"net/rpc"
+	mirror "github.com/mefellows/mirror/mirror"
+	pki "github.com/mefellows/mirror/pki"
 	"strings"
 )
 
@@ -57,47 +54,17 @@ func (c *RemoteCommand) Run(args []string) int {
 		return 1
 	}
 	config, err := pkiMgr.GetClientTLSConfig()
-	if err != nil {
-		log.Fatalf("Error creating TLS Config: %s", err)
-		c.Meta.Ui.Error(fmt.Sprintf("Error setting up Secure communications: %s", err.Error()))
-	}
+	pki.MirrorConfig.ClientTlsConfig = config
 
-	// Connect to RPC server
-	var client *rpc.Client
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", c.Host, c.Port), config)
-	defer conn.Close()
-	if err != nil {
-		log.Fatalf("client: dial: %s", err)
-	}
-	log.Println("client: connected to: ", conn.RemoteAddr())
-	client = rpc.NewClient(conn)
+	remoteFsFactory, _ := mirror.FileSystemFactories.Lookup("http")
+	remoteFs, _ := remoteFsFactory(c.Src)
+	file, fromFs, _ := utils.MakeFile(c.Src)
+	toFile := utils.MkToFile(c.Src, c.Dest, file)
+	bytes, _ := fromFs.Read(file)
+	fmt.Printf("File to write: %v", toFile.Path())
 
-	// Perform remote operation
-	fromFile, fromFs, err := utils.MakeFile(c.Src)
-	if err != nil {
-		log.Printf("Error making from file: %v", err)
-	}
-	toFile, _, err := utils.MakeFile(c.Src)
-	if err != nil {
-		log.Printf("Error making to file: %v", err)
-	}
-	//toFs, err := utils.GetFileSystemFromFile(c.Dest)
-	//fromFs, err := utils.GetFileSystemFromFile(c.Src)
-	bytes, err := fromFs.Read(fromFile)
-	if err != nil {
-		c.Meta.Ui.Error(fmt.Sprintf("Error reading from source file: %s", err.Error()))
-		return 1
-	}
-	rpcargs := &remote.WriteRequest{toFile, bytes, 0644}
-	var reply remote.WriteResponse
-	err = client.Call("RemoteFileSystem.RemoteWrite", rpcargs, &reply)
-
-	if reply.Success {
-		c.Meta.Ui.Output(fmt.Sprintf("Copied '%s' to '%s'", c.Src, c.Dest))
-	} else {
-		c.Meta.Ui.Error(fmt.Sprintf("Unable to copy '%s' to '%s'. Error: %s", c.Src, c.Dest, err))
-		return 1
-	}
+	err = remoteFs.Write(toFile, bytes, 0644)
+	fmt.Printf("Response from remote command: %v", err)
 
 	return 0
 }
