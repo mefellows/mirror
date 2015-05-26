@@ -8,8 +8,12 @@ import (
 	"github.com/mefellows/mirror/mirror"
 	"github.com/mefellows/mirror/pki"
 	"log"
+	"net"
 	"net/rpc"
+	neturl "net/url"
 	"os"
+	"strconv"
+	"strings"
 )
 
 // A Remote FileSystem is essentially a Mirror daemon
@@ -31,10 +35,25 @@ func init() {
 
 func NewRemoteFileSystem(url string) (filesystem.FileSystem, error) {
 	// Resolve/Validate URL?
+	uri, err := neturl.Parse(url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for host:port part
+	host := uri.Host
+	p := "8123"
+
+	if strings.Contains(host, ":") {
+		host, p, err = net.SplitHostPort(host)
+	}
+	port, _ := strconv.Atoi(p)
 
 	// Create RPC server
 	var client *rpc.Client
-	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", "localhost", 8123), pki.MirrorConfig.ClientTlsConfig)
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", host, port), pki.MirrorConfig.ClientTlsConfig)
+
 	// TODO: How to terminate connection when done - we want to keep open during course of events?
 	//defer conn.Close()
 	if err != nil {
@@ -73,7 +92,7 @@ func (f RemoteFileSystem) Write(file filesystem.File, data []byte, perm os.FileM
 	log.Printf("Writing to file: %s @ %s", file.Name(), file.Path())
 
 	// Perform remote operation
-	rpcargs := &WriteRequest{file, data, 0644}
+	rpcargs := &WriteRequest{file, data, perm}
 	var reply WriteResponse
 	err = f.client.Call("RemoteFileSystem.RemoteWrite", rpcargs, &reply)
 

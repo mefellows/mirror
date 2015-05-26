@@ -62,7 +62,7 @@ func TestGenerateCertificate(t *testing.T) {
 	os.Setenv("MACHINE_DIR", "")
 
 	// Client Cert
-	if err := GenerateCertificate([]string{""}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
+	if err := GenerateCertificate([]string{"localhost"}, certPath, keyPath, caCertPath, caKeyPath, testOrg, bits); err != nil {
 		t.Fatal(err)
 	}
 

@@ -76,7 +76,7 @@ func (fs StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMod
 	if _, err := os.Stat(parentPath); err != nil {
 		dir := filesystem.File{
 			FilePath: parentPath,
-			FileMode: 0755,
+			FileMode: 0755, // This is obviously not good, need a neat way to get perms about...
 		}
 		fs.MkDir(dir)
 	}

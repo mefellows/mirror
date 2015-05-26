@@ -162,7 +162,7 @@ func (p *PKI) SetupPKI(caHost string) error {
 	if p.CheckSetup() == nil {
 		return nil
 	}
-	log.Printf("Setting up PKI...")
+	log.Printf("Setting up PKI for '%s'...", caHost)
 
 	bits := 2048
 	if _, err := os.Stat(p.Config.CaCertPath); err == nil {
@@ -182,8 +182,8 @@ func (p *PKI) SetupPKI(caHost string) error {
 		return fmt.Errorf("Couldn't generate CA Certificate: %s", err.Error())
 	}
 
-	organisation := "localhost"
-	hosts := []string{"localhost"}
+	organisation := caHost
+	hosts := []string{caHost}
 
 	os.MkdirAll(filepath.Dir(p.Config.ServerCertPath), 0700)
 	err := GenerateCertificate(hosts, p.Config.ServerCertPath, p.Config.ServerKeyPath, p.Config.CaCertPath, p.Config.CaKeyPath, organisation, bits)

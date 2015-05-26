@@ -43,7 +43,9 @@ mirror remote --hostname myhost.com --src /tmp/foo --dest /tmp/bar
 The use of SSL is recommended when transferring files between remote file systems, let's
 see how we go about this with mirror.
 
-To begin with, start the daemon with `mirror daemon`.
+To begin with, setup the PKI for the host with `mirror pki --caHost mydomain.com`, being careful to replace `mydomain.com` with your own domain/hostname.
+
+You may now start the daemon with `mirror daemon`.
 
 This will create a Certificate Authority (CA) in `~/.mirror.d/ca/`, 
 and client certificates in `~/.mirror.d/certs`. We will need
@@ -58,8 +60,8 @@ mirror pki --outputClientKey > client.pem
 Download these files to your local system. From the client, we import them back in:
 
 ```
-mirror pki --importCA --certFile ca.crt
-mirror pki --importClientCert --certFile client.crt --importClientKey --keyFile client.pem
+mirror pki --importCA  ca.crt
+mirror pki --importClientCert client.crt --importClientKey client.pem
 ```
 
 We can now communicate securely with the remote host over a trusted connection:

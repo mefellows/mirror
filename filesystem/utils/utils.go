@@ -5,6 +5,7 @@ import (
 	"fmt"
 	fs "github.com/mefellows/mirror/filesystem"
 	"github.com/mefellows/mirror/mirror"
+	"net/url"
 	"strings"
 )
 
@@ -37,26 +38,36 @@ func MkToFile(fromBase string, toBase string, file fs.File) fs.File {
 	return toFile
 }
 
+func ExtractURL(file string) *url.URL {
+	url, err := url.Parse(file)
+	if err != nil {
+		fmt.Printf("Error parsing URL: %v", err)
+		return nil
+	}
+
+	if url.Scheme == "" {
+		url.Scheme = "file"
+	}
+
+	return url
+}
+
 func GetFileSystemFromFile(file string) (fs.FileSystem, error) {
 	var filesys fs.FileSystem
 	var err error
 
 	// Default protocol is "file"
-	protocol := "file"
-	i := strings.Index(file, "://")
-	if i > -1 {
-		protocol = file[:i]
-	}
+	url := ExtractURL(file)
 
 	// Given a protocol, find its implementor
-	if factory, ok := mirror.FileSystemFactories.Lookup(protocol); ok {
+	if factory, ok := mirror.FileSystemFactories.Lookup(url.Scheme); ok {
 
 		filesys, err = factory(file)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		err = errors.New(fmt.Sprintf("Unable to find a suitable File System Plugin for the protocol \"%s\"", protocol))
+		err = errors.New(fmt.Sprintf("Unable to find a suitable File System Plugin for the protocol \"%s\"", url.Scheme))
 	}
 	return filesys, err
 
