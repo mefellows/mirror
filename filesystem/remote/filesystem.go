@@ -65,6 +65,12 @@ func NewRemoteFileSystem(url string) (filesystem.FileSystem, error) {
 	return RemoteFileSystem{root: url, client: client}, err
 }
 
+// Remote RPC Types
+type RemoteResponse struct {
+	Success bool
+	Error   error
+}
+
 type WriteRequest struct {
 	File filesystem.File
 	Data []byte
@@ -72,19 +78,71 @@ type WriteRequest struct {
 }
 
 type WriteResponse struct {
-	Success bool
+	RemoteResponse
 }
 
-func (f *RemoteFileSystem) RemoteWrite(req *WriteRequest, res *WriteResponse) error {
+type ReadFileRequest struct {
+	File string
+}
+
+type ReadFileResponse struct {
+	RemoteResponse
+	File filesystem.File
+}
+
+type ReadRequest struct {
+	File filesystem.File
+}
+
+type ReadResponse struct {
+	RemoteResponse
+	Data []byte
+}
+
+type FileTreeRequest struct {
+	File filesystem.File
+}
+
+type FileTreeResponse struct {
+	RemoteResponse
+	FileTree filesystem.FileTree
+}
+
+type DirRequest struct {
+	File string
+}
+
+type DirResponse struct {
+	RemoteResponse
+	Files []filesystem.File
+}
+
+type DeleteRequest struct {
+	File filesystem.File
+}
+
+type DeleteResponse struct {
+	RemoteResponse
+}
+
+type MkDirRequest struct {
+	File filesystem.File
+}
+
+type MkDirResponse struct {
+	RemoteResponse
+}
+
+func (f *RemoteFileSystem) RemoteWrite(req *WriteRequest, res *RemoteResponse) error {
 	fmt.Printf("Writing to file: %s @ %s\n", req.File.Name(), req.File.Path())
 	log.Printf("Writing to file: %s @ %s\n", req.File.Name(), req.File.Path())
 	fsys := fs.StdFileSystem{}
-	err := fsys.Write(req.File, req.Data, req.Perm)
-	if err == nil {
+	res.Error = fsys.Write(req.File, req.Data, req.Perm)
+	if res.Error == nil {
 		res.Success = true
 	}
 	log.Printf("Writing to file on remote side: %s @ %s. Error? %v\n", req.File.Name(), req.File.Path())
-	return err
+	return res.Error
 }
 
 func (f RemoteFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) (err error) {
@@ -93,40 +151,97 @@ func (f RemoteFileSystem) Write(file filesystem.File, data []byte, perm os.FileM
 
 	// Perform remote operation
 	rpcargs := &WriteRequest{file, data, perm}
-	var reply WriteResponse
+	var reply RemoteResponse
 	err = f.client.Call("RemoteFileSystem.RemoteWrite", rpcargs, &reply)
 
 	if reply.Success {
-		fmt.Printf("Hey yo - remote success!")
+		fmt.Printf("Hey yo - remote write success!")
 	}
 	return err
 }
 
-func (f RemoteFileSystem) Read(file filesystem.File) ([]byte, error) {
+func (f RemoteFileSystem) RemoteRead(req *ReadRequest, res *ReadResponse) error {
 	fsys := fs.StdFileSystem{}
-	return fsys.Read(file)
+	res.Data, res.Error = fsys.Read(req.File)
+	return res.Error
+}
+
+func (f RemoteFileSystem) Read(file filesystem.File) ([]byte, error) {
+	rpcargs := &ReadRequest{File: file}
+	var reply ReadResponse
+	f.client.Call("RemoteFileSystem.RemoteRead", rpcargs, &reply)
+
+	return reply.Data, reply.Error
+}
+
+func (f RemoteFileSystem) RemoteFileTree(req *FileTreeRequest, res *FileTreeResponse) error {
+	fsys := fs.StdFileSystem{}
+	res.FileTree = fsys.FileTree(req.File)
+	return res.Error
 }
 
 func (f RemoteFileSystem) FileTree(file filesystem.File) filesystem.FileTree {
+	rpcargs := &FileTreeRequest{File: file}
+	var reply FileTreeResponse
+	f.client.Call("RemoteFileSystem.RemoteFileTree", rpcargs, &reply)
+
+	return reply.FileTree
+}
+
+func (f RemoteFileSystem) RemoteDelete(req *DeleteRequest, res *DeleteResponse) error {
 	fsys := fs.StdFileSystem{}
-	return fsys.FileTree(file)
+	res.Error = fsys.Delete(req.File)
+	return res.Error
 }
 
 func (f RemoteFileSystem) Delete(file filesystem.File) error {
+	rpcargs := &DeleteRequest{File: file}
+	var reply DeleteResponse
+	f.client.Call("RemoteFileSystem.RemoteDelete", rpcargs, &reply)
+
+	return reply.Error
+}
+
+func (f RemoteFileSystem) RemoteDir(req *DirRequest, res *DirResponse) error {
 	fsys := fs.StdFileSystem{}
-	return fsys.Delete(file)
+	res.Files, res.Error = fsys.Dir(req.File)
+	return res.Error
 }
 
 func (f RemoteFileSystem) Dir(dir string) ([]filesystem.File, error) {
+	rpcargs := &DirRequest{File: dir}
+	var reply DirResponse
+	err := f.client.Call("RemoteFileSystem.RemoteDir", rpcargs, &reply)
+
+	return reply.Files, err
+}
+
+func (f RemoteFileSystem) RemoteReadFile(req *ReadFileRequest, res *ReadFileResponse) error {
 	fsys := fs.StdFileSystem{}
-	return fsys.Dir(dir)
+	res.File, res.Error = fsys.ReadFile(req.File)
+	return res.Error
 }
 
 func (f RemoteFileSystem) ReadFile(file string) (filesystem.File, error) {
+	rpcargs := &ReadFileRequest{File: file}
+	var reply ReadFileResponse
+	err := f.client.Call("RemoteFileSystem.RemoteReadFile", rpcargs, &reply)
+
+	return reply.File, err
+}
+
+func (f RemoteFileSystem) RemoteMkdir(req *MkDirRequest, res *MkDirResponse) error {
 	fsys := fs.StdFileSystem{}
-	return fsys.ReadFile(file)
+	res.Error = fsys.MkDir(req.File)
+	if res.Error == nil {
+		res.Success = true
+	}
+	return res.Error
 }
 func (f RemoteFileSystem) MkDir(file filesystem.File) error {
-	fsys := fs.StdFileSystem{}
-	return fsys.MkDir(file)
+	rpcargs := &MkDirRequest{File: file}
+	var reply MkDirResponse
+	err := f.client.Call("RemoteFileSystem.RemoteMkDir", rpcargs, &reply)
+
+	return err
 }

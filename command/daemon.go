@@ -86,6 +86,7 @@ Usage: mirror daemon [options]
 Options:
 
   --port                      The http(s) port to listen on
+  --host                      The IP address to listen on. Defaults to 0.0.0.0
   --insecure				  Disable SSL security on the connection
 `
 
