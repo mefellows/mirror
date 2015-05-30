@@ -7,6 +7,10 @@ It is similar to rsync, but is bi-directional and can transfer between varying f
 [![Build Status](https://travis-ci.org/mefellows/mirror.svg?branch=master)](https://travis-ci.org/mefellows/mirror)
 [![Coverage Status](https://coveralls.io/repos/mefellows/mirror/badge.svg?branch=master)](https://coveralls.io/r/mefellows/mirror?branch=master)
 
+## Getting Mirror
+
+Mirror is go gettable with `go get github.com/mefellows/mirror`. You can also download the [binary releases](https://github.com/mefellows/mirror/releases).
+
 ## Status
 
 Highly experimental and not Production ready.
@@ -15,14 +19,6 @@ Highly experimental and not Production ready.
 
 * Sync a local source directory with a remote file-system-like structure, including S3 - can sync in either direction, initiated from either side.
 * Copy from a local source directory to a remote file-system-like structure, including S3
-
-### Sync/Copy To/From S3
-
-Ensure your AWS Credentials are loaded in the [appropriate](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) environment variables or files:
-
-```
-bin/mirror sync --src /tmp/dat1 --dest s3://mybucket.s3.amazonaws.com/dat2
-```
 
 ### Remote FS sync (ala rsync):
 
@@ -35,7 +31,7 @@ mirror daemon --insecure
 On the client, specify the hostname of the remote server:
 
 ```
-mirror remote --hostname myhost.com --src /tmp/foo --dest /tmp/bar
+mirror sync --src /tmp/foo --dest mirror://mydomain.com/tmp/bar
 ```
 
 ### Remote FS sync with SSL enabled
@@ -70,3 +66,10 @@ We can now communicate securely with the remote host over a trusted connection:
 bin/mirror sync --host myserver.com --src /tmp/dat1 --dest /var/backups/dat1
 ```
 
+### Sync/Copy To/From S3
+
+Ensure your AWS Credentials are loaded in the [appropriate](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) environment variables or files:
+
+```
+bin/mirror sync --src /tmp/dat1 --dest s3://mybucket.s3.amazonaws.com/dat2
+```
