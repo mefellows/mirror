@@ -22,8 +22,7 @@ import (
 // to the StdFileSystem File System but is wrapped in a Go
 // RPC server.
 type RemoteFileSystem struct {
-	root string
-
+	rootUrl neturl.URL
 	// TODO: Embed the RPC Client in here and wrap the write
 	client *rpc.Client
 }
@@ -31,6 +30,7 @@ type RemoteFileSystem struct {
 func init() {
 	mirror.FileSystemFactories.Register(NewRemoteFileSystem, "ssh")
 	mirror.FileSystemFactories.Register(NewRemoteFileSystem, "http")
+	mirror.FileSystemFactories.Register(NewRemoteFileSystem, "mirror")
 }
 
 func NewRemoteFileSystem(url string) (filesystem.FileSystem, error) {
@@ -62,7 +62,7 @@ func NewRemoteFileSystem(url string) (filesystem.FileSystem, error) {
 	}
 	log.Println("client: connected to: ", conn.RemoteAddr())
 	client = rpc.NewClient(conn)
-	return RemoteFileSystem{root: url, client: client}, err
+	return RemoteFileSystem{rootUrl: *uri, client: client}, err
 }
 
 // Remote RPC Types
@@ -99,13 +99,22 @@ type ReadResponse struct {
 	Data []byte
 }
 
+type FileMapRequest struct {
+	File filesystem.File
+}
+
+type FileMapResponse struct {
+	RemoteResponse
+	FileMap filesystem.FileMap
+}
+
 type FileTreeRequest struct {
 	File filesystem.File
 }
 
 type FileTreeResponse struct {
 	RemoteResponse
-	FileTree filesystem.FileTree
+	FileTree *filesystem.FileTree
 }
 
 type DirRequest struct {
@@ -134,8 +143,6 @@ type MkDirResponse struct {
 }
 
 func (f *RemoteFileSystem) RemoteWrite(req *WriteRequest, res *RemoteResponse) error {
-	fmt.Printf("Writing to file: %s @ %s\n", req.File.Name(), req.File.Path())
-	log.Printf("Writing to file: %s @ %s\n", req.File.Name(), req.File.Path())
 	fsys := fs.StdFileSystem{}
 	res.Error = fsys.Write(req.File, req.Data, req.Perm)
 	if res.Error == nil {
@@ -146,17 +153,10 @@ func (f *RemoteFileSystem) RemoteWrite(req *WriteRequest, res *RemoteResponse) e
 }
 
 func (f RemoteFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) (err error) {
-	fmt.Printf("Writing to file: %s @ %s", file.Name(), file.Path())
-	log.Printf("Writing to file: %s @ %s", file.Name(), file.Path())
-
 	// Perform remote operation
 	rpcargs := &WriteRequest{file, data, perm}
 	var reply RemoteResponse
 	err = f.client.Call("RemoteFileSystem.RemoteWrite", rpcargs, &reply)
-
-	if reply.Success {
-		fmt.Printf("Hey yo - remote write success!")
-	}
 	return err
 }
 
@@ -174,13 +174,31 @@ func (f RemoteFileSystem) Read(file filesystem.File) ([]byte, error) {
 	return reply.Data, reply.Error
 }
 
+func (f RemoteFileSystem) RemoteFileMap(req *FileMapRequest, res *FileMapResponse) error {
+	fsys, err := fs.NewStdFileSystem(f.rootUrl.Path)
+	if err == nil {
+		res.FileMap = fsys.FileMap(req.File)
+	} else {
+		res.Error = err
+	}
+	return res.Error
+}
+
+func (f RemoteFileSystem) FileMap(file filesystem.File) filesystem.FileMap {
+	rpcargs := &FileMapRequest{File: file}
+	var reply FileMapResponse
+	f.client.Call("RemoteFileSystem.RemoteFileMap", rpcargs, &reply)
+
+	return reply.FileMap
+}
+
 func (f RemoteFileSystem) RemoteFileTree(req *FileTreeRequest, res *FileTreeResponse) error {
 	fsys := fs.StdFileSystem{}
 	res.FileTree = fsys.FileTree(req.File)
 	return res.Error
 }
 
-func (f RemoteFileSystem) FileTree(file filesystem.File) filesystem.FileTree {
+func (f RemoteFileSystem) FileTree(file filesystem.File) *filesystem.FileTree {
 	rpcargs := &FileTreeRequest{File: file}
 	var reply FileTreeResponse
 	f.client.Call("RemoteFileSystem.RemoteFileTree", rpcargs, &reply)

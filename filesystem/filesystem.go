@@ -11,10 +11,13 @@ type FileSystem interface {
 	Read(File) ([]byte, error)                            // Read a File
 	ReadFile(file string) (File, error)                   // Read a file and return a File
 	Write(file File, data []byte, perm os.FileMode) error // Write a File
-	FileTree(root File) FileTree                          // Returns a FileTree structure of Files representing the FileSystem hierarchy
+	FileTree(root File) *FileTree                         // Returns a FileTree structure of Files representing the FileSystem hierarchy
+	FileMap(root File) FileMap                            // Returns a FileMap structure of Files representing a flattened FileSystem hierarchy
 	MkDir(file File) error
 	Delete(file File) error // Delete a file on the FileSystem
 }
+
+type FileMap map[string]File
 
 // Simple File abstraction (based on os.FileInfo)
 //

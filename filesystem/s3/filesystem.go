@@ -158,7 +158,11 @@ func (fs S3FileSystem) Delete(file filesystem.File) error {
 	return errors.New("Function not yet implemented")
 }
 
-func (fs S3FileSystem) FileTree(root filesystem.File) filesystem.FileTree {
+func (fs S3FileSystem) FileMap(root filesystem.File) filesystem.FileMap {
+	return nil
+}
+
+func (fs S3FileSystem) FileTree(root filesystem.File) *filesystem.FileTree {
 	return nil
 }
 

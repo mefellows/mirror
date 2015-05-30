@@ -41,7 +41,6 @@ func MkToFile(fromBase string, toBase string, file fs.File) fs.File {
 func ExtractURL(file string) *url.URL {
 	url, err := url.Parse(file)
 	if err != nil {
-		fmt.Printf("Error parsing URL: %v", err)
 		return nil
 	}
 
@@ -58,6 +57,10 @@ func GetFileSystemFromFile(file string) (fs.FileSystem, error) {
 
 	// Default protocol is "file"
 	url := ExtractURL(file)
+
+	if url == nil {
+		return nil, errors.New(fmt.Sprintf("Unable to generate URL from: %s", file))
+	}
 
 	// Given a protocol, find its implementor
 	if factory, ok := mirror.FileSystemFactories.Lookup(url.Scheme); ok {
@@ -80,7 +83,8 @@ func MakeFile(file string) (fs.File, fs.FileSystem, error) {
 	var f fs.File
 	filesys, err := GetFileSystemFromFile(file)
 	if err == nil {
-		f, err = filesys.ReadFile(file)
+		url := ExtractURL(file)
+		f, err = filesys.ReadFile(url.Path)
 	} else {
 		err = errors.New(fmt.Sprintf("Unable to find a suitable File System Plugin for the protocol: %v", err))
 	}

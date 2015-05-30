@@ -1,43 +1,34 @@
 package filesystem
 
 import (
-	"errors"
-	"sync"
+	"strings"
 )
 
 // A FileTree is a two-way linked Tree data-structure the represents
 // a hierarchy of files and directories.
 // At any point in the hierarchy one can navigate freely between nodes,
 // and the ordering is preserved
-type FileTree interface {
-	ParentNode() FileTree
-	ChildNodes() []FileTree
-	File() File
-}
 
 // Default Impl
-type StdFileSystemTree struct {
+type FileTree struct {
 	StdFile       File
-	StdParentNode FileTree
-	StdChildNodes []FileTree
+	StdParentNode *FileTree
+	StdChildNodes []*FileTree
 }
 
-func (fs StdFileSystemTree) ParentNode() FileTree   { return fs.StdParentNode }
-func (fs StdFileSystemTree) ChildNodes() []FileTree { return fs.StdChildNodes }
-func (fs StdFileSystemTree) File() File             { return fs.StdFile }
+func (fs *FileTree) ParentNode() *FileTree   { return fs.StdParentNode }
+func (fs *FileTree) ChildNodes() []*FileTree { return fs.StdChildNodes }
+func (fs *FileTree) File() File              { return fs.StdFile }
 
 // Convert a FileTree to an Ordered ListMap
-func FileTreeToMap(tree FileTree) (map[string]File, error) {
-
-	if tree == nil {
-		return nil, errors.New("Empty tree")
-	}
+func FileTreeToMap(tree FileTree, base string) (map[string]File, error) {
 
 	fileMap := map[string]File{}
 
 	treeFunc := func(tree FileTree) (FileTree, error) {
 		if _, present := fileMap[tree.File().Path()]; !present {
-			fileMap[tree.File().Path()] = tree.File()
+			path := strings.TrimPrefix(tree.File().Path(), base)
+			fileMap[path] = tree.File()
 		}
 		return tree, nil
 	}
@@ -51,6 +42,7 @@ func FileTreeToMap(tree FileTree) (map[string]File, error) {
 // their own definition.
 //
 // Best we can do here is O(n) - we need to traverse 'src' and then compare 'target'
+/*
 func FileTreeDiff(src FileTree, target FileTree, comparators ...func(left File, right File) bool) (diff []File, err error) {
 	// Prep our two trees into lists concurrently
 	var leftMap map[string]File
@@ -67,11 +59,16 @@ func FileTreeDiff(src FileTree, target FileTree, comparators ...func(left File, 
 	}()
 	done.Wait()
 
+	return FileMapDiff(leftMap, rightMap, comparators...)
+}
+*/
+
+func FileMapDiff(src map[string]File, target map[string]File, comparators ...func(left File, right File) bool) (diff []File, err error) {
 	// Iterate over the src list, comparing each item to the corresponding
 	// match in the target Map
 	diff = make([]File, 0)
-	for filename, file := range leftMap {
-		rightFile := rightMap[filename]
+	for filename, file := range src {
+		rightFile := target[filename]
 		// All comparators need to agree they are NOT different (false)
 		for _, c := range comparators {
 			if !c(file, rightFile) {
@@ -93,7 +90,7 @@ func FileTreeWalk(tree FileTree, treeFunc func(tree FileTree) (FileTree, error))
 		for _, node := range tree.ChildNodes() {
 
 			// Mutate the tree and return any errors
-			node, err := treeFunc(node)
+			node, err := treeFunc(*node)
 			if err != nil {
 				return err
 			}

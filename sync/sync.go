@@ -6,6 +6,7 @@ import (
 	"github.com/mefellows/mirror/filesystem"
 	utils "github.com/mefellows/mirror/filesystem/utils"
 	"log"
+	"sync"
 )
 
 func Sync(srcRaw string, destRaw string) error {
@@ -13,19 +14,31 @@ func Sync(srcRaw string, destRaw string) error {
 	// Remove from src/dest strings
 	src := utils.ExtractURL(srcRaw).Path
 	dest := utils.ExtractURL(destRaw).Path
-	fmt.Printf("Src: %s, Dest: %s", src, dest)
 
 	// Get a handle on the to/from Filesystems
 	fromFile, fromFs, err := utils.MakeFile(srcRaw)
 
 	if err != nil {
-		log.Printf("Error opening src file: %v", err)
 		return err
 	}
 	if fromFile.IsDir() {
 		toFile, toFs, err := utils.MakeFile(destRaw)
-		diff, err := filesystem.FileTreeDiff(
-			fromFs.FileTree(fromFile), toFs.FileTree(toFile), filesystem.ModifiedComparator)
+
+		var leftMap filesystem.FileMap
+		var rightMap filesystem.FileMap
+		var done sync.WaitGroup
+		done.Add(2)
+		go func() {
+			leftMap = fromFs.FileMap(fromFile)
+			done.Done()
+		}()
+		go func() {
+			rightMap = toFs.FileMap(toFile)
+			done.Done()
+		}()
+		done.Wait()
+		diff, err := filesystem.FileMapDiff(
+			leftMap, rightMap, filesystem.ModifiedComparator)
 
 		if err == nil {
 			for _, file := range diff {
@@ -33,12 +46,11 @@ func Sync(srcRaw string, destRaw string) error {
 
 				if err == nil {
 					if file.IsDir() {
-						//log.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
+						log.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
 						toFs.MkDir(toFile)
 					} else {
-						//log.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
+						log.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
 						bytes, err := fromFs.Read(file)
-						//log.Printf("Read bytes: %s\n", len(bytes))
 						err = toFs.Write(toFile, bytes, file.Mode())
 						if err != nil {
 							log.Printf("Error copying file %s: %v", file.Path(), err)
@@ -51,7 +63,6 @@ func Sync(srcRaw string, destRaw string) error {
 		}
 	} else {
 		toFile := utils.MkToFile(src, dest, fromFile)
-		log.Printf("Current mode: %s", fromFile.Mode())
 		toFs, err := utils.GetFileSystemFromFile(destRaw)
 		if err != nil {
 			log.Printf("Error opening dest file: %v", err)
