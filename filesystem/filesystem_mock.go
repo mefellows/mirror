@@ -14,7 +14,8 @@ type MockFileSystem struct {
 	DirFiles []File
 	DirError error
 
-	FileTreeTree  FileTree
+	FileTreeTree  *FileTree
+	FileMapMap    FileMap
 	MockFile      File
 	MockFileError error
 }
@@ -44,7 +45,11 @@ func (fs MockFileSystem) Write(File, []byte, os.FileMode) error {
 	return fs.WriteError
 }
 
-func (fs MockFileSystem) FileTree(root File) FileTree {
+func (fs MockFileSystem) FileMap(root File) FileMap {
+	return fs.FileMapMap
+}
+
+func (fs MockFileSystem) FileTree(root File) *FileTree {
 	return fs.FileTreeTree
 }
 

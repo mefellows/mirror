@@ -26,7 +26,7 @@ type FileMap map[string]File
 //
 type File struct {
 	FileName    string      // base name of the file
-	FilePath    string      // base name of the file
+	FilePath    string      // Full path to file, including filename
 	FileSize    int64       // length in bytes for regular files; system-dependent for others
 	FileModTime time.Time   // modification time
 	FileMode    os.FileMode // File details including perms

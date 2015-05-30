@@ -24,26 +24,26 @@ func Test_FileTree(t *testing.T) {
 
 func makeFileTree() FileTree {
 
-	tree := &MockFileTree{}
-	tree.FileFile = makeFile(true, File{})
-	tree.ParentNodeFileTree = nil
-	pnodes := make([]FileTree, 3)
+	tree := &FileTree{}
+	tree.StdFile = makeFile(true, File{})
+	tree.StdParentNode = nil
+	pnodes := make([]*FileTree, 3)
 
 	for i := 0; i < 3; i++ {
-		nodes := make([]FileTree, 3)
-		node := &MockFileTree{}
-		node.ParentNodeFileTree = tree
-		node.FileFile = makeFile(true, tree.File())
+		nodes := make([]*FileTree, 3)
+		node := &FileTree{}
+		node.StdParentNode = tree
+		node.StdFile = makeFile(true, tree.File())
 		for j := 0; j < 3; j++ {
-			treeNode := &MockFileTree{}
-			treeNode.FileFile = makeFile(false, node.File())
+			treeNode := &FileTree{}
+			treeNode.StdFile = makeFile(false, node.File())
 			nodes[j] = treeNode
 		}
-		node.ChildNodesArray = nodes
+		node.StdChildNodes = nodes
 		pnodes[i] = node
 	}
-	tree.ChildNodesArray = pnodes
-	return tree
+	tree.StdChildNodes = pnodes
+	return *tree
 }
 
 func TestFileTreeWalk(t *testing.T) {
@@ -93,52 +93,56 @@ func TestFileTreeWalk_Error(t *testing.T) {
 
 func TestFileTreeToMap(t *testing.T) {
 	tree1 := makeFileTree()
-	fileMap, _ := FileTreeToMap(tree1)
+	fileMap, _ := FileTreeToMap(tree1, "")
 
 	if len(fileMap) != 12 {
 		t.Fatalf("List should be size 12 but was %d", len(fileMap))
 	}
 }
 func TestFileTreeDiff(t *testing.T) {
-	tree := &MockFileTree{}
-	tree.FileFile = makeFile(true, File{})
-	tree.ParentNodeFileTree = nil
-	pnodes := make([]FileTree, 3)
+	tree := &FileTree{}
+	tree.StdFile = makeFile(true, File{})
+	tree.StdParentNode = nil
+	pnodes := make([]*FileTree, 3)
 
 	for i := 0; i < 3; i++ {
-		nodes := make([]FileTree, 3)
-		node := &MockFileTree{}
-		node.ParentNodeFileTree = tree
-		node.FileFile = File{FileName: fmt.Sprintf("foo/%d", i)}
+		nodes := make([]*FileTree, 3)
+		node := &FileTree{}
+		node.StdParentNode = tree
+		node.StdFile = File{FileName: fmt.Sprintf("%d", i), FilePath: fmt.Sprintf("foo/%d", i)}
 		for j := 0; j < 3; j++ {
-			treeNode := &MockFileTree{}
-			treeNode.FileFile = File{FileName: fmt.Sprintf("foo/%d/%d", i, j)}
+			treeNode := &FileTree{}
+			treeNode.StdFile = File{FileName: fmt.Sprintf("%d", i, j), FilePath: fmt.Sprintf("foo/%d/%d", i, j)}
 			nodes[j] = treeNode
 		}
-		node.ChildNodesArray = nodes
+		node.StdChildNodes = nodes
 		pnodes[i] = node
 	}
-	tree.ChildNodesArray = pnodes
+	tree.StdChildNodes = pnodes
 
-	tree2 := &MockFileTree{}
-	tree2.FileFile = makeFile(true, File{})
-	tree2.ParentNodeFileTree = nil
-	pnodes2 := make([]FileTree, 3)
+	tree2 := &FileTree{}
+	tree2.StdFile = makeFile(true, File{})
+	tree2.StdParentNode = nil
+	pnodes2 := make([]*FileTree, 3)
 
 	for i := 0; i < 3; i++ {
-		nodes := make([]FileTree, 3)
-		node := &MockFileTree{}
-		node.ParentNodeFileTree = tree2
-		node.FileFile = File{FilePath: fmt.Sprintf("foo2/%d", i)}
+		nodes := make([]*FileTree, 3)
+		node := &FileTree{}
+		node.StdParentNode = tree2
+		node.StdFile = File{FileName: fmt.Sprintf("%d", i), FilePath: fmt.Sprintf("foo/%d", i)}
 		for j := 0; j < 3; j++ {
-			tree2Node := &MockFileTree{}
-			tree2Node.FileFile = File{FilePath: fmt.Sprintf("foo/%d/%d", i, j)}
+			tree2Node := &FileTree{}
+			if i == 0 {
+				tree2Node.StdFile = File{FileName: fmt.Sprintf("%d", i, j), FilePath: fmt.Sprintf("foo/%d/me-%d", i, j)}
+			} else {
+				tree2Node.StdFile = File{FileName: fmt.Sprintf("%d", i, j), FilePath: fmt.Sprintf("foo/%d/%d", i, j)}
+			}
 			nodes[j] = tree2Node
 		}
-		node.ChildNodesArray = nodes
+		node.StdChildNodes = nodes
 		pnodes2[i] = node
 	}
-	tree2.ChildNodesArray = pnodes2
+	tree2.StdChildNodes = pnodes2
 
 	var exists = func(l File, r File) bool {
 		if r.Name() != "" {
@@ -146,9 +150,12 @@ func TestFileTreeDiff(t *testing.T) {
 		}
 		return false
 	}
-	diff, _ := FileTreeDiff(tree, tree2, exists)
+
+	//diff, _ := FileTreeDiff(tree, tree2, exists)
+	map1, _ := FileTreeToMap(*tree, "foo")
+	map2, _ := FileTreeToMap(*tree2, "foo")
+	diff, _ := FileMapDiff(map1, map2, exists)
 	if len(diff) != 3 {
 		t.Fatalf("First 3 child nodes should be different (foo/{1..3} vs foo2/{1..3}. Got %d", len(diff))
 	}
-	fmt.Printf("Diff tree %v\n", diff)
 }

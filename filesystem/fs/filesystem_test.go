@@ -18,7 +18,7 @@ func TestFileTree(t *testing.T) {
 	file := FromFileInfo("", i)
 	tree := fs.FileTree(file)
 
-	m, _ := filesystem.FileTreeToMap(tree)
+	m, _ := filesystem.FileTreeToMap(*tree, "/tmp")
 	if !(len(m) > 0) {
 		t.Fatalf("Expected map size to be greater than 0")
 	}
