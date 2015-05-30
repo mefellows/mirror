@@ -26,7 +26,7 @@ func FileTreeToMap(tree FileTree, base string) (map[string]File, error) {
 	fileMap := map[string]File{}
 
 	treeFunc := func(tree FileTree) (FileTree, error) {
-		if _, present := fileMap[tree.File().Path()]; !present {
+		if _, present := fileMap[strings.Replace(tree.File().Path(), "\\", "/", -1)]; !present {
 			path := strings.TrimPrefix(tree.File().Path(), base)
 			fileMap[path] = tree.File()
 		}

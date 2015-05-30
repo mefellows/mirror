@@ -76,7 +76,7 @@ func (c *SyncCommand) Run(args []string) int {
 	err = sync.Sync(c.Src, c.Dest)
 
 	if err != nil {
-		c.Meta.Ui.Error(fmt.Sprintf("%v", err))
+		c.Meta.Ui.Error(fmt.Sprintf("Error during file sync: %v", err))
 		return 1
 	}
 

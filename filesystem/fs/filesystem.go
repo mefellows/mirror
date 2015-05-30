@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem"
+	utils "github.com/mefellows/mirror/filesystem/utils"
 	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	neturl "net/url"
@@ -28,7 +29,7 @@ func NewStdFileSystem(path string) (filesystem.FileSystem, error) {
 }
 
 func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
-	readFiles, err := ioutil.ReadDir(fmt.Sprintf("%v/", dir))
+	readFiles, err := ioutil.ReadDir(utils.LinuxPath(fmt.Sprintf("%v/", dir)))
 	if err == nil {
 		files := make([]filesystem.File, len(readFiles))
 

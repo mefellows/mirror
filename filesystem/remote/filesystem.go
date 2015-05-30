@@ -188,7 +188,6 @@ func (f RemoteFileSystem) FileMap(file filesystem.File) filesystem.FileMap {
 	rpcargs := &FileMapRequest{File: file}
 	var reply FileMapResponse
 	f.client.Call("RemoteFileSystem.RemoteFileMap", rpcargs, &reply)
-
 	return reply.FileMap
 }
 

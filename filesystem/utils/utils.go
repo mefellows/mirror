@@ -17,7 +17,6 @@ import (
 // This is handy for creating a target File for syncing to a destination
 // Note that this expects any protocol part of the path to be removed
 func MkToFile(fromBase string, toBase string, file fs.File) fs.File {
-
 	// src:  /foo/bar/baz/bat.txt
 	// dest: /lol/
 	// target: /lol/bat.txt
@@ -27,7 +26,7 @@ func MkToFile(fromBase string, toBase string, file fs.File) fs.File {
 	// target: s3:///lol/foo/bar/baz
 
 	// TODO: This needs some work
-	path := fmt.Sprintf("%s", strings.Replace(file.Path(), fromBase, toBase, -1))
+	path := fmt.Sprintf("%s", strings.Replace(LinuxPath(file.Path()), LinuxPath(fromBase), LinuxPath(toBase), -1))
 	toFile := fs.File{
 		FileName:    file.Name(),
 		FilePath:    path,
@@ -90,4 +89,10 @@ func MakeFile(file string) (fs.File, fs.FileSystem, error) {
 	}
 
 	return f, filesys, err
+}
+
+func LinuxPath(path string) string {
+	path = strings.Replace(path, "\\", "/", -1)
+	path = strings.Replace(path, "//", "/", -1)
+	return path
 }
