@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+func RelativeFilePath(fromBase string, toBase string, localFilePath string) string {
+	return fmt.Sprintf("%s", strings.Replace(LinuxPath(localFilePath), LinuxPath(fromBase), LinuxPath(toBase), -1))
+}
+
 // TODO: This is still StdFS Specific
 // Also, we need the prefix/protocol on this for MakeFile.
 

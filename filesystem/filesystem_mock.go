@@ -37,7 +37,7 @@ func (fs MockFileSystem) ReadFile(file string) (File, error) {
 	return fs.MockFile, fs.MockFileError
 }
 
-func (fs MockFileSystem) Delete(File) error {
+func (fs MockFileSystem) Delete(string) error {
 	return fs.MockFileError
 }
 

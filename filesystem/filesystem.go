@@ -14,7 +14,7 @@ type FileSystem interface {
 	FileTree(root File) *FileTree                         // Returns a FileTree structure of Files representing the FileSystem hierarchy
 	FileMap(root File) FileMap                            // Returns a FileMap structure of Files representing a flattened FileSystem hierarchy
 	MkDir(file File) error
-	Delete(file File) error // Delete a file on the FileSystem
+	Delete(file string) error // Delete a file on the FileSystem
 }
 
 type FileMap map[string]File

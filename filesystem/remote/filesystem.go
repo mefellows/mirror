@@ -127,7 +127,7 @@ type DirResponse struct {
 }
 
 type DeleteRequest struct {
-	File filesystem.File
+	File string
 }
 
 type DeleteResponse struct {
@@ -211,7 +211,7 @@ func (f RemoteFileSystem) RemoteDelete(req *DeleteRequest, res *DeleteResponse) 
 	return res.Error
 }
 
-func (f RemoteFileSystem) Delete(file filesystem.File) error {
+func (f RemoteFileSystem) Delete(file string) error {
 	rpcargs := &DeleteRequest{File: file}
 	var reply DeleteResponse
 	f.client.Call("RemoteFileSystem.RemoteDelete", rpcargs, &reply)
@@ -247,7 +247,7 @@ func (f RemoteFileSystem) ReadFile(file string) (filesystem.File, error) {
 	return reply.File, err
 }
 
-func (f RemoteFileSystem) RemoteMkdir(req *MkDirRequest, res *MkDirResponse) error {
+func (f RemoteFileSystem) RemoteMkDir(req *MkDirRequest, res *MkDirResponse) error {
 	fsys := fs.StdFileSystem{}
 	res.Error = fsys.MkDir(req.File)
 	if res.Error == nil {

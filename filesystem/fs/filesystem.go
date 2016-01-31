@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"errors"
 	"fmt"
 	"github.com/mefellows/mirror/filesystem"
 	utils "github.com/mefellows/mirror/filesystem/utils"
@@ -69,8 +68,8 @@ func (fs StdFileSystem) ReadFile(f string) (filesystem.File, error) {
 	return FromFileInfo(parentPath, i), err
 }
 
-func (fs StdFileSystem) Delete(file filesystem.File) error {
-	return errors.New("Function not yet implemented")
+func (fs StdFileSystem) Delete(file string) error {
+	return os.RemoveAll(file)
 }
 
 func (fs StdFileSystem) Write(file filesystem.File, data []byte, perm os.FileMode) error {
