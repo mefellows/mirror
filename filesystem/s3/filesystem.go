@@ -154,8 +154,8 @@ func (fs S3FileSystem) MkDir(file filesystem.File) error {
 	return errors.New("Function not yet implemented")
 }
 
-func (fs S3FileSystem) Delete(file filesystem.File) error {
-	return errors.New("Function not yet implemented")
+func (fs S3FileSystem) Delete(file string) error {
+	return fs.Delete(file)
 }
 
 func (fs S3FileSystem) FileMap(root filesystem.File) filesystem.FileMap {

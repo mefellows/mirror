@@ -28,6 +28,7 @@ type SyncCommand struct {
 	Cert     string
 	Key      string
 	Insecure bool
+	Watch    bool
 	Filters  []string
 	Exclude  excludes
 }
@@ -43,6 +44,7 @@ func (c *SyncCommand) Run(args []string) int {
 	cmdFlags.StringVar(&c.Key, "key", "", "The location of a client key to use")
 	cmdFlags.IntVar(&c.Port, "port", 8123, "The destination host")
 	cmdFlags.BoolVar(&c.Insecure, "insecure", false, "Run operation over an insecure connection")
+	cmdFlags.BoolVar(&c.Watch, "watch", false, "Watch for file updates, and continuously sync on changes from --src")
 	cmdFlags.Var(&c.Exclude, "exclude", "Set of exclusions as POSIX regular expressions to exclude from the transfer")
 
 	// Validate
@@ -75,6 +77,11 @@ func (c *SyncCommand) Run(args []string) int {
 
 	err = sync.Sync(c.Src, c.Dest)
 
+	if c.Watch {
+		c.Meta.Ui.Output(fmt.Sprintf("Monitoring %s for changes...", c.Src))
+		sync.Watch(c.Src, c.Dest)
+	}
+
 	if err != nil {
 		c.Meta.Ui.Error(fmt.Sprintf("Error during file sync: %v", err))
 		return 1
@@ -101,6 +108,7 @@ Options:
   --key                       The key (.pem) to use in secure requests
   --exclude                   A regular expression used to exclude files and directories that match. 
                               This is a special option that may be specified multiple times
+  --watch                     Watch for changes in source directory and continuously sync to dest
 `
 
 	return strings.TrimSpace(helpText)

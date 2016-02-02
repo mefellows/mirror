@@ -27,11 +27,6 @@ func init() {
 				Meta: meta,
 			}, nil
 		},
-		"remote": func() (cli.Command, error) {
-			return &RemoteCommand{
-				Meta: meta,
-			}, nil
-		},
 		"sync": func() (cli.Command, error) {
 			return &SyncCommand{
 				Meta: meta,

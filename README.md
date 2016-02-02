@@ -13,12 +13,12 @@ Mirror is go gettable with `go get github.com/mefellows/mirror`. You can also do
 
 ## Status
 
-Highly experimental and not Production ready.
+Beta: features are working as expected, but it's fairly rough around the edges. In use in non-mission critical systems.
 
 ## Features
 
 * Sync a local source directory with a remote file-system-like structure, including S3 - can sync in either direction, initiated from either side.
-* Copy from a local source directory to a remote file-system-like structure, including S3
+* Watch a directory and _continuously_ synchronise changes to a another file system (local, remote or S3)
 
 ### Remote FS sync (ala rsync):
 
@@ -32,6 +32,14 @@ On the client, specify the hostname of the remote server:
 
 ```
 mirror sync --src /tmp/foo --dest mirror://mydomain.com/tmp/bar
+```
+
+#### Watch for changes:
+
+Simple add the `--watch` flag, and mirror will watch for changes, and continuously synchronise them to the target:
+
+```
+mirror sync --src /tmp/foo --dest mirror://mydomain.com/tmp/bar --watch
 ```
 
 ### Remote FS sync with SSL enabled
@@ -63,7 +71,7 @@ mirror pki --importClientCert client.crt --importClientKey client.pem
 We can now communicate securely with the remote host over a trusted connection:
 
 ```
-bin/mirror sync --host myserver.com --src /tmp/dat1 --dest /var/backups/dat1
+bin/mirror sync --src /tmp/dat1 --dest mirror://myserver/var/backups/dat1
 ```
 
 ### Sync/Copy To/From S3
