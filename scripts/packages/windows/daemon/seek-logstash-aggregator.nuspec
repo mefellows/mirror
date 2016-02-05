@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>mirror</id>
+    <title>Mirror</title>
+    <version>0.0.0.1</version>
+    <authors>mefellows</authors>
+    <summary>A small, machine-independent utility to synchronise folders across machines and file-systems</summary>
+    <description>Installs mirror binary </description>
+    <projectUrl>http://github.com/mefellows/mirror<projectUrl>
+    <tags>file copy utility</tags>
+    <copyright>Matt Fellows</copyright>
+    <licenseUrl>https://opensource.org/licenses/MIT</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <releaseNotes></releaseNotes>
+	<dependencies>
+		<dependency id="chocolatey" />
+	</dependencies>
+  </metadata>
+  <files>
+	  <file src="tools\**" target="tools" />
+  </files>
+</package>
