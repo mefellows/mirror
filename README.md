@@ -2,7 +2,7 @@
 
 A small, machine-independent utility to synchronise folders across machines and file-systems.
 
-It is similar to rsync, but is bi-directional and can transfer between varying file system types (e.g. S3) and operating systems.
+It is similar to rsync, but is bi-directional and can transfer between varying file system types (e.g. S3) and operating systems, and can watch for file changes.
 
 [![Build Status](https://travis-ci.org/mefellows/mirror.svg?branch=master)](https://travis-ci.org/mefellows/mirror)
 [![Coverage Status](https://coveralls.io/repos/mefellows/mirror/badge.svg?branch=master)](https://coveralls.io/r/mefellows/mirror?branch=master)
