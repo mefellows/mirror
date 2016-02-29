@@ -1,13 +1,13 @@
 package sync
 
 import (
-	"errors"
 	"fmt"
+	"log"
+	"sync"
+
 	"github.com/mefellows/mirror/filesystem"
 	utils "github.com/mefellows/mirror/filesystem/utils"
 	"gopkg.in/fsnotify.v1"
-	"log"
-	"sync"
 )
 
 func Sync(srcRaw string, destRaw string) error {
@@ -22,12 +22,9 @@ func Sync(srcRaw string, destRaw string) error {
 	if err != nil {
 		return err
 	}
-
-	toFile, toFs, err := utils.MakeFile(destRaw)
-
 	if fromFile.IsDir() {
+		toFile, toFs, err := utils.MakeFile(destRaw)
 
-		// Build file trees on both sides of the operation, and compare
 		var leftMap filesystem.FileMap
 		var rightMap filesystem.FileMap
 		var done sync.WaitGroup
@@ -47,13 +44,42 @@ func Sync(srcRaw string, destRaw string) error {
 		if err == nil {
 			for _, file := range diff {
 				toFile = utils.MkToFile(src, dest, file)
-				CopySingle(fromFs, src, toFs, toFile.Path())
+
+				if err == nil {
+					if file.IsDir() {
+						log.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
+						toFs.MkDir(toFile)
+					} else {
+						log.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
+						bytes, err := fromFs.Read(file)
+						err = toFs.Write(toFile, bytes, file.Mode())
+						if err != nil {
+							log.Printf("Error copying file %s: %v", file.Path(), err)
+						}
+					}
+				}
 			}
 		} else {
 			log.Printf("Error: %v\n", err)
 		}
 	} else {
-		CopySingle(fromFs, src, toFs, dest)
+		toFile := utils.MkToFile(src, dest, fromFile)
+		toFs, err := utils.GetFileSystemFromFile(destRaw)
+		if err != nil {
+			log.Printf("Error opening dest file: %v", err)
+			return fmt.Errorf("Error opening dest file: %v", err)
+		}
+
+		bytes, err := fromFs.Read(fromFile)
+		if err != nil {
+			log.Printf("Error reading from source file: %s", err.Error())
+			return fmt.Errorf("Error reading source file: %v", err)
+		}
+		err = toFs.Write(toFile, bytes, toFile.Mode())
+		if err != nil {
+			log.Printf("Error writing to remote path: %s", err.Error())
+			return fmt.Errorf("Error write to remote path: %v", err)
+		}
 	}
 	return err
 }
@@ -69,7 +95,7 @@ func CopySingle(srcFs filesystem.FileSystem, srcRaw string, destFs filesystem.Fi
 
 	if err != nil {
 		log.Printf("Error opening dest file: %v", err)
-		return errors.New(fmt.Sprintf("Error opening dest file: %v", err))
+		return fmt.Errorf("Error opening dest file: %v", err)
 	}
 
 	if fromFile.IsDir() {
