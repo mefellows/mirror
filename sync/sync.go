@@ -3,6 +3,8 @@ package sync
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/mefellows/mirror/filesystem"
@@ -120,6 +122,19 @@ func Watch(srcRaw string, destRaw string) error {
 	}
 	defer watcher.Close()
 
+	err = filepath.Walk(srcRaw, func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			err = watcher.Add(path)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fromFs, err := utils.GetFileSystemFromFile(srcRaw)
 	toFs, err := utils.GetFileSystemFromFile(destRaw)
 	src := utils.ExtractURL(srcRaw).Path
@@ -130,18 +145,35 @@ func Watch(srcRaw string, destRaw string) error {
 		for {
 			select {
 			case event := <-watcher.Events:
+				file, _, _ := utils.MakeFile(event.Name)
+
+				// File Delete
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
 					path := utils.RelativeFilePath(src, dest, event.Name)
 					err := DeleteSingle(toFs, path)
 					if err != nil {
-						log.Printf("Error: %v", err)
+						log.Fatalf("Unable to delete remote file: %v", err)
+					}
+					if file.IsDir() {
+						err := watcher.Remove(event.Name)
+						if err != nil {
+							log.Fatalf("Unable to stop watching remote file %s. %v", event.Name, err)
+						}
 					}
 				} else {
+					// File create/update
 					path := utils.RelativeFilePath(src, dest, event.Name)
 					CopySingle(fromFs, event.Name, toFs, path)
+					if file.IsDir() && event.Op&fsnotify.Create == fsnotify.Create {
+						err := watcher.Add(event.Name)
+						if err != nil {
+							log.Fatalf("Unable to setup watch on file %s. %v", event.Name, err)
+						}
+					}
 				}
+
 			case err := <-watcher.Errors:
-				log.Println("Error:", err)
+				log.Println("Watch error:", err)
 			}
 		}
 	}()
