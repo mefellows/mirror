@@ -14,7 +14,7 @@ import (
 )
 
 type Options struct {
-	Exclude []string
+	Exclude []regexp.Regexp
 }
 
 func Sync(srcRaw string, destRaw string, options *Options) error {
@@ -51,7 +51,7 @@ func Sync(srcRaw string, destRaw string, options *Options) error {
 		if err == nil {
 			for _, file := range diff {
 
-				if ignoreFile(file.Path(), options) {
+				if ignoreFile(file.Path(), options.Exclude) {
 					continue
 				}
 				toFile = utils.MkToFile(src, dest, file)
@@ -99,7 +99,6 @@ func DeleteSingle(destFs filesystem.FileSystem, destRaw string) error {
 	return destFs.Delete(destRaw)
 }
 
-// Copy a single file/dir (mkdir).
 func CopySingle(srcFs filesystem.FileSystem, srcRaw string, destFs filesystem.FileSystem, destRaw string) error {
 	fromFile, _, err := utils.MakeFile(srcRaw)
 	toFile := utils.MkToFile(srcRaw, destRaw, fromFile)
@@ -124,15 +123,10 @@ func CopySingle(srcFs filesystem.FileSystem, srcRaw string, destFs filesystem.Fi
 	return nil
 }
 
-func ignoreFile(filepath string, options *Options) bool {
-	for _, ex := range options.Exclude {
-		r, err := regexp.CompilePOSIX(ex)
-		if err == nil {
-			if r.FindString(filepath) != "" {
-				return true
-			}
-		} else {
-			log.Println("Error parsing exclusion regex:", err.Error())
+func ignoreFile(filepath string, excludes []regexp.Regexp) bool {
+	for _, r := range excludes {
+		if r.FindString(filepath) != "" {
+			return true
 		}
 	}
 	return false
@@ -146,7 +140,7 @@ func Watch(srcRaw string, destRaw string, options *Options) error {
 	defer watcher.Close()
 
 	err = filepath.Walk(srcRaw, func(path string, f os.FileInfo, err error) error {
-		if f.IsDir() && !ignoreFile(path, options) {
+		if f.IsDir() && !ignoreFile(path, options.Exclude) {
 			err = watcher.Add(path)
 			if err != nil {
 				log.Fatal(err)
@@ -169,7 +163,7 @@ func Watch(srcRaw string, destRaw string, options *Options) error {
 			select {
 			case event := <-watcher.Events:
 				file, _, _ := utils.MakeFile(event.Name)
-				if ignoreFile(file.Path(), options) {
+				if ignoreFile(file.Path(), options.Exclude) {
 					continue
 				}
 
