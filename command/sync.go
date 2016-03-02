@@ -8,17 +8,6 @@ import (
 	"strings"
 )
 
-type excludes []string
-
-func (e *excludes) String() string {
-	return fmt.Sprintf("%s", *e)
-}
-
-func (e *excludes) Set(value string) error {
-	*e = append(*e, value)
-	return nil
-}
-
 type SyncCommand struct {
 	Meta     Meta
 	Dest     string
@@ -30,7 +19,23 @@ type SyncCommand struct {
 	Insecure bool
 	Watch    bool
 	Filters  []string
-	Exclude  excludes
+	Exclude  ExcludeSlice
+}
+
+type ExcludeSlice []string
+
+func (e *ExcludeSlice) String() string {
+	return fmt.Sprintf("%s", *e)
+}
+
+func (e *ExcludeSlice) Set(value string) error {
+	*e = append(*e, value)
+	return nil
+}
+
+type ExcludeFlags interface {
+	String() string
+	Set(string) error
 }
 
 func (c *SyncCommand) Run(args []string) int {
@@ -75,11 +80,12 @@ func (c *SyncCommand) Run(args []string) int {
 
 	c.Meta.Ui.Output(fmt.Sprintf("Syncing contents of '%s' -> '%s'", c.Src, c.Dest))
 
-	err = sync.Sync(c.Src, c.Dest)
+	options := &sync.Options{Exclude: c.Exclude}
+	err = sync.Sync(c.Src, c.Dest, options)
 
 	if c.Watch {
 		c.Meta.Ui.Output(fmt.Sprintf("Monitoring %s for changes...", c.Src))
-		sync.Watch(c.Src, c.Dest)
+		sync.Watch(c.Src, c.Dest, options)
 	}
 
 	if err != nil {
@@ -106,7 +112,7 @@ Options:
   --insecure          		  The file transfer should be performed over an unencrypted connection
   --cert                      The certificate (.pem) to use in secure requests
   --key                       The key (.pem) to use in secure requests
-  --exclude                   A regular expression used to exclude files and directories that match. 
+  --exclude                   A regular expression used to exclude files and directories that match. Can be specified multiple times.
                               This is a special option that may be specified multiple times
   --watch                     Watch for changes in source directory and continuously sync to dest
 `
