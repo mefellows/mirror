@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 
 	"github.com/mefellows/mirror/filesystem"
@@ -12,7 +13,11 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
-func Sync(srcRaw string, destRaw string) error {
+type Options struct {
+	Exclude []string
+}
+
+func Sync(srcRaw string, destRaw string, options *Options) error {
 
 	// Remove from src/dest strings
 	src := utils.ExtractURL(srcRaw).Path
@@ -45,6 +50,10 @@ func Sync(srcRaw string, destRaw string) error {
 
 		if err == nil {
 			for _, file := range diff {
+
+				if ignoreFile(file.Path(), options) {
+					continue
+				}
 				toFile = utils.MkToFile(src, dest, file)
 
 				if err == nil {
@@ -115,7 +124,21 @@ func CopySingle(srcFs filesystem.FileSystem, srcRaw string, destFs filesystem.Fi
 	return nil
 }
 
-func Watch(srcRaw string, destRaw string) error {
+func ignoreFile(filepath string, options *Options) bool {
+	for _, ex := range options.Exclude {
+		r, err := regexp.CompilePOSIX(ex)
+		if err == nil {
+			if r.FindString(filepath) != "" {
+				return true
+			}
+		} else {
+			log.Println("Error parsing exclusion regex:", err.Error())
+		}
+	}
+	return false
+}
+
+func Watch(srcRaw string, destRaw string, options *Options) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -123,7 +146,7 @@ func Watch(srcRaw string, destRaw string) error {
 	defer watcher.Close()
 
 	err = filepath.Walk(srcRaw, func(path string, f os.FileInfo, err error) error {
-		if f.IsDir() {
+		if f.IsDir() && !ignoreFile(path, options) {
 			err = watcher.Add(path)
 			if err != nil {
 				log.Fatal(err)
@@ -146,6 +169,9 @@ func Watch(srcRaw string, destRaw string) error {
 			select {
 			case event := <-watcher.Events:
 				file, _, _ := utils.MakeFile(event.Name)
+				if ignoreFile(file.Path(), options) {
+					continue
+				}
 
 				// File Delete
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
