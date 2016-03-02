@@ -36,11 +36,21 @@ mirror sync --src /tmp/foo --dest mirror://mydomain.com/tmp/bar
 
 #### Watch for changes:
 
-Simple add the `--watch` flag, and mirror will watch for changes, and continuously synchronise them to the target:
+Simply add the `--watch` flag, and mirror will watch for changes, and continuously synchronise them to the target:
 
 ```
 mirror sync --src /tmp/foo --dest mirror://mydomain.com/tmp/bar --watch
 ```
+
+#### Exclude files
+
+The `--exclude` flag accepts a POSIX regular expression that can be used to filter files to be synced:
+
+```
+mirror sync --src /tmp/foo --dest /tmp/bar --exclude ".git" --exclude "^ignore" --exclude "tmp$"
+```
+
+The `--exclude` flag may be specified multiple times.
 
 ### Remote FS sync with SSL enabled
 
@@ -51,7 +61,7 @@ To begin with, setup the PKI for the host with `mirror pki --caHost mydomain.com
 
 You may now start the daemon with `mirror daemon`.
 
-This will create a Certificate Authority (CA) in `~/.mirror.d/ca/`, 
+This will create a Certificate Authority (CA) in `~/.mirror.d/ca/`,
 and client certificates in `~/.mirror.d/certs`. We will need
 this to communicate securely across the network, let's extract them:
 
