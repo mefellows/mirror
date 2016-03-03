@@ -6,6 +6,7 @@ It is similar to rsync, but is bi-directional and can transfer between varying f
 
 [![Build Status](https://travis-ci.org/mefellows/mirror.svg?branch=master)](https://travis-ci.org/mefellows/mirror)
 [![Coverage Status](https://coveralls.io/repos/mefellows/mirror/badge.svg?branch=master)](https://coveralls.io/r/mefellows/mirror?branch=master)
+[![GoDoc](https://godoc.org/github.com/mefellows/mirror?status.svg)](https://godoc.org/github.com/mefellows/mirror)
 
 ## Getting Mirror
 
