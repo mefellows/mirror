@@ -3,12 +3,13 @@ package command
 import (
 	"flag"
 	"fmt"
-	pki "github.com/mefellows/mirror/pki"
-	sync "github.com/mefellows/mirror/sync"
 	"io/ioutil"
 	"log"
 	"regexp"
 	"strings"
+
+	pki "github.com/mefellows/mirror/pki"
+	sync "github.com/mefellows/mirror/sync"
 )
 
 type SyncCommand struct {
@@ -34,8 +35,11 @@ func (e *ExcludeSlice) String() string {
 
 func (e *ExcludeSlice) Set(value string) error {
 	r, err := regexp.CompilePOSIX(value)
-	if err != nil {
+	if err == nil {
+		log.Println("posix regex:", value)
 		*e = append(*e, *r)
+	} else {
+		log.Fatalf(fmt.Sprintf("Error parsing exclud regex: %v. Error: %v", value, err.Error()))
 	}
 	return nil
 }
@@ -109,10 +113,10 @@ func (c *SyncCommand) Run(args []string) int {
 
 func (c *SyncCommand) Help() string {
 	helpText := `
-Usage: mirror sync [options] 
+Usage: mirror sync [options]
 
   Copy the contents of the source directory (-src) to the destination directory (-dest) recursively.
-  
+
 Options:
 
   --src                       The source directory from which to copy from
@@ -126,7 +130,7 @@ Options:
   --exclude                   A regular expression used to exclude files and directories that match. Can be specified multiple times.
                               This is a special option that may be specified multiple times
   --watch                     Watch for changes in source directory and continuously sync to dest
-  --verbose                   Enable output logging 
+  --verbose                   Enable output logging
 `
 
 	return strings.TrimSpace(helpText)
