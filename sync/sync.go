@@ -15,9 +15,20 @@ import (
 
 type Options struct {
 	Exclude []regexp.Regexp
+	Verbose bool
 }
 
-func Sync(srcRaw string, destRaw string, options *Options) error {
+var options *Options
+
+func logOutput(format string, v ...interface{}) {
+	if options.Verbose {
+		log.Printf(format, v...)
+	}
+
+}
+
+func Sync(srcRaw string, destRaw string, opts *Options) error {
+	options = opts
 
 	// Remove from src/dest strings
 	src := utils.ExtractURL(srcRaw).Path
@@ -58,37 +69,37 @@ func Sync(srcRaw string, destRaw string, options *Options) error {
 
 				if err == nil {
 					if file.IsDir() {
-						log.Printf("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
+						logOutput("Mkdir: %s -> %s\n", file.Path(), toFile.Path())
 						toFs.MkDir(toFile)
 					} else {
-						log.Printf("Copying file: %s -> %s\n", file.Path(), toFile.Path())
+						logOutput("Copying file: %s -> %s\n", file.Path(), toFile.Path())
 						bytes, err := fromFs.Read(file)
 						err = toFs.Write(toFile, bytes, file.Mode())
 						if err != nil {
-							log.Printf("Error copying file %s: %v", file.Path(), err)
+							logOutput("Error copying file %s: %v", file.Path(), err)
 						}
 					}
 				}
 			}
 		} else {
-			log.Printf("Error: %v\n", err)
+			logOutput("Error: %v\n", err)
 		}
 	} else {
 		toFile := utils.MkToFile(src, dest, fromFile)
 		toFs, err := utils.GetFileSystemFromFile(destRaw)
 		if err != nil {
-			log.Printf("Error opening dest file: %v", err)
+			logOutput("Error opening dest file: %v", err)
 			return fmt.Errorf("Error opening dest file: %v", err)
 		}
 
 		bytes, err := fromFs.Read(fromFile)
 		if err != nil {
-			log.Printf("Error reading from source file: %s", err.Error())
+			logOutput("Error reading from source file: %s", err.Error())
 			return fmt.Errorf("Error reading source file: %v", err)
 		}
 		err = toFs.Write(toFile, bytes, toFile.Mode())
 		if err != nil {
-			log.Printf("Error writing to remote path: %s", err.Error())
+			logOutput("Error writing to remote path: %s", err.Error())
 			return fmt.Errorf("Error write to remote path: %v", err)
 		}
 	}
@@ -104,19 +115,19 @@ func CopySingle(srcFs filesystem.FileSystem, srcRaw string, destFs filesystem.Fi
 	toFile := utils.MkToFile(srcRaw, destRaw, fromFile)
 
 	if err != nil {
-		log.Printf("Error opening dest file: %v", err)
+		logOutput("Error opening dest file: %v", err)
 		return fmt.Errorf("Error opening dest file: %v", err)
 	}
 
 	if fromFile.IsDir() {
-		log.Printf("Mkdir %s -> %s\n", fromFile.Path(), toFile.Path())
+		logOutput("Mkdir %s -> %s\n", fromFile.Path(), toFile.Path())
 		destFs.MkDir(toFile)
 	} else {
-		log.Printf("Copying file: %s -> %s\n", fromFile.Path(), toFile.Path())
+		logOutput("Copying file: %s -> %s\n", fromFile.Path(), toFile.Path())
 		bytes, err := srcFs.Read(fromFile)
 		err = destFs.Write(toFile, bytes, fromFile.Mode())
 		if err != nil {
-			log.Printf("Error copying file %s: %v", fromFile.Path(), err)
+			logOutput("Error copying file %s: %v", fromFile.Path(), err)
 		}
 	}
 
@@ -132,7 +143,8 @@ func ignoreFile(filepath string, excludes []regexp.Regexp) bool {
 	return false
 }
 
-func Watch(srcRaw string, destRaw string, options *Options) error {
+func Watch(srcRaw string, destRaw string, opts *Options) error {
+	options = opts
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -193,7 +205,7 @@ func Watch(srcRaw string, destRaw string, options *Options) error {
 				}
 
 			case err := <-watcher.Errors:
-				log.Println("Watch error:", err)
+				logOutput("Watch error: %v\n", err)
 			}
 		}
 	}()
