@@ -95,7 +95,7 @@ func (c *SyncCommand) Run(args []string) int {
 	}
 	c.Meta.Ui.Output(fmt.Sprintf("Syncing contents of '%s' -> '%s'", c.Src, c.Dest))
 
-	options := &sync.Options{Exclude: c.Exclude}
+	options := &sync.Options{Exclude: c.Exclude, Verbose: c.Verbose}
 	err = sync.Sync(c.Src, c.Dest, options)
 
 	if c.Watch {

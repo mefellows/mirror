@@ -3,10 +3,12 @@ package filesystem
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"regexp"
+	"strings"
+
 	fs "github.com/mefellows/mirror/filesystem"
 	"github.com/mefellows/mirror/mirror"
-	"net/url"
-	"strings"
 )
 
 func RelativeFilePath(fromBase string, toBase string, localFilePath string) string {
@@ -95,7 +97,16 @@ func MakeFile(file string) (fs.File, fs.FileSystem, error) {
 	return f, filesys, err
 }
 
+// TODO: Move this into a Windows specific build function and
+//       make unix a no-op
 func LinuxPath(path string) string {
+	// Strip drive prefix c:/ etc.
+	// TODO: Need to find a way to deal with paths properly (i.e. what if multiple drives!)
+	r, _ := regexp.CompilePOSIX("([a-zA-Z]:)(\\.*)")
+	if r.MatchString(path) {
+		path = r.ReplaceAllString(path, "$2")
+	}
+
 	path = strings.Replace(path, "\\", "/", -1)
 	path = strings.Replace(path, "//", "/", -1)
 	return path

@@ -2,13 +2,14 @@ package fs
 
 import (
 	"fmt"
-	"github.com/mefellows/mirror/filesystem"
-	utils "github.com/mefellows/mirror/filesystem/utils"
-	"github.com/mefellows/mirror/mirror"
 	"io/ioutil"
 	neturl "net/url"
 	"os"
 	"path/filepath"
+
+	"github.com/mefellows/mirror/filesystem"
+	utils "github.com/mefellows/mirror/filesystem/utils"
+	"github.com/mefellows/mirror/mirror"
 )
 
 // Basic File System implementation using OOTB Golang constructs
@@ -44,7 +45,8 @@ func (fs StdFileSystem) Dir(dir string) ([]filesystem.File, error) {
 
 // Converts a FileInfo -> StdFile
 func FromFileInfo(dir string, i os.FileInfo) filesystem.File {
-	path := fmt.Sprintf("%s/%s", dir, i.Name())
+
+	path := utils.LinuxPath(fmt.Sprintf("%s/%s", dir, i.Name()))
 	file := filesystem.File{
 		FileName:    i.Name(),
 		FilePath:    path,
